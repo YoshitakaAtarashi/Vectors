@@ -1,0 +1,3470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>VECTORS - PC-9801 ブラウザ移植版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=BIZ+UDGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+body {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+  background: #b88820;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 17px,
+      rgba(0,0,0,0.08) 17px,
+      rgba(0,0,0,0.08) 18px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(0,0,0,0.06) 39px,
+      rgba(0,0,0,0.06) 40px
+    );
+  color: #fff;
+  font-family: 'BIZ UDGothic', 'DotGothic16', 'MS Gothic', 'ＭＳ ゴシック', monospace;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 10px;
+}
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+#app-main {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+#game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 {
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: #ffd700;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px #ffd700;
+}
+#canvas-container {
+  position: relative;
+  border: 3px solid #aa8800;
+  background: #050510;
+  box-shadow: 0 0 0 2px #332200,
+              0 0 0 5px #aa8800,
+              0 0 24px rgba(200,150,0,0.35);
+}
+canvas { display: block; image-rendering: pixelated; }
+#side-panel {
+  width: 106px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 0;
+  height: 504px;       /* canvas CH(504px) — fixed so margin-top:auto works */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #446 #0a0a20;
+}
+.panel-box {
+  border: 1px solid #664400;
+  padding: 5px 6px;
+  background: #1a0e04;
+}
+.panel-box h3 {
+  font-size: 9px;
+  color: #88aaff;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.panel-box .value {
+  font-size: 15px;
+  color: #ffd700;
+  text-align: center;
+}
+#next-canvas { display: block; margin: 0 auto; }
+#info {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #6688aa;
+}
+#info b { color: #88bbff; }
+#overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+#overlay h2 { font-size: 24px; color: #ffd700; margin-bottom: 16px; letter-spacing: 3px; }
+#overlay p { font-size: 13px; color: #aaccff; margin: 4px 0; }
+#overlay button {
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: #223366;
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 2px;
+}
+#overlay button:hover:not(.kf) { background: #334477; }
+#guide-link {
+  display: block;
+  margin-bottom: 8px;
+  padding: 6px 4px;
+  background: #1a2a3a;
+  color: #aaccee;
+  border: 1px solid #5588aa;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 3px;
+}
+#guide-link:hover { background: #223344; color: #cce4ff; border-color: #88bbdd; }
+
+/* ---- Track title notification (inside canvas-container, above overlay) ---- */
+#track-title {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(100%);
+  background: linear-gradient(90deg, rgba(0,0,8,0.96) 0%, rgba(5,5,20,0.90) 70%, rgba(0,0,8,0.70) 100%);
+  border-top: 1px solid rgba(255,215,0,0.45);
+}
+#track-title.tt-show {
+  animation: ttSlide 5.5s ease-out forwards;
+}
+#track-title-icon {
+  color: #ffd700;
+  font-size: 16px;
+  flex-shrink: 0;
+  animation: ttPulse 1s ease-in-out infinite;
+}
+#track-title-text {
+  color: #ffd700;
+  font-size: 16px;
+  font-family: 'BIZ UDGothic', 'DotGothic16', 'MS Gothic', 'ＭＳ ゴシック', monospace;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(255,215,0,0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes ttSlide {
+  0%   { transform: translateY(100%); opacity: 0; }
+  10%  { transform: translateY(0);    opacity: 1; }
+  72%  { transform: translateY(0);    opacity: 1; }
+  100% { transform: translateY(0);    opacity: 0; }
+}
+@keyframes ttPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.2); }
+}
+
+@keyframes hsNew {
+  from { opacity: 0.55; }
+  to   { opacity: 1; text-shadow: 0 0 14px #ffd700, 0 0 28px rgba(255,215,0,0.5); }
+}
+/* Keyboard / gamepad focus indicator */
+.kf {
+  outline: 2px solid #ffd700 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 10px rgba(255,215,0,0.5) !important;
+}
+.kcrow.kf { outline-offset: -1px !important; background: rgba(255,215,0,0.07) !important; }
+
+/* ---- Virtual Gamepad ---- */
+#vpad {
+  display: none;
+  width: 518px; /* full #app width */
+  margin-top: 8px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid #553300;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+@media (pointer: coarse) { #vpad { display: flex; } }
+.vbtn {
+  background: rgba(10,10,32,0.92);
+  border: 2px solid #664400;
+  color: #ffd700;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-user-select: none;
+  touch-action: manipulation;
+  width: 66px; height: 66px;
+  flex-shrink: 0;
+}
+.vbtn:active { background: rgba(100,68,0,0.75); }
+#vpad-dir {
+  display: grid;
+  grid-template-areas: ". up ." "left down right";
+  grid-template-columns: repeat(3, 66px);
+  grid-template-rows: repeat(2, 66px);
+  gap: 5px;
+}
+#vbtn-up    { grid-area: up; }
+#vbtn-left  { grid-area: left; }
+#vbtn-down  { grid-area: down; }
+#vbtn-right { grid-area: right; }
+#vpad-pause { display: flex; align-items: center; justify-content: center; }
+#vbtn-pause { width: 52px; height: 52px; font-size: 16px; color: #99aabb; border-color: #445566; }
+#vpad-act { display: flex; flex-direction: row; gap: 8px; align-items: center; }
+#vbtn-trn { font-size: 13px; color: #ffaa44; border-color: #aa6600; background: rgba(40,20,0,0.92); }
+#vbtn-rot { font-size: 13px; color: #88bbff; border-color: #4488ff; background: rgba(0,20,70,0.92); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="app-main">
+    <div id="game-area">
+      <div id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="overlay">
+          <h2>VECTORS</h2>
+          <button id="start-btn">START GAME</button>
+        </div>
+        <div id="track-title">
+          <span id="track-title-icon">♪</span>
+          <span id="track-title-text"></span>
+        </div>
+      </div>
+    </div>
+    <div id="side-panel">
+    <div class="panel-box">
+      <h3>SCORE</h3>
+      <div class="value" id="score-val">0</div>
+    </div>
+    <div class="panel-box">
+      <h3>STAGE</h3>
+      <div class="value" id="stage-val">1</div>
+    </div>
+    <div class="panel-box">
+      <h3>NEXT</h3>
+      <canvas id="next-canvas" width="44" height="124"></canvas>
+    </div>
+    <div style="margin-top:auto;padding:8px 4px 4px;">
+      <a id="guide-link" href="guide.html">攻略ガイド</a>
+      <div style="text-align:center;">
+        <img src="images/darkveil.png" style="max-width:100%;opacity:0.7;image-rendering:pixelated;">
+      </div>
+    </div>
+  </div>
+  </div><!-- /#app-main -->
+  <!-- Virtual Gamepad (touch devices only) -->
+  <div id="vpad">
+    <div id="vpad-dir">
+      <button class="vbtn" id="vbtn-up"    data-vact="up">▲</button>
+      <button class="vbtn" id="vbtn-left"  data-vact="left">◀</button>
+      <button class="vbtn" id="vbtn-down"  data-vact="down">▼</button>
+      <button class="vbtn" id="vbtn-right" data-vact="right">▶</button>
+    </div>
+    <div id="vpad-pause">
+      <button class="vbtn" id="vbtn-pause" data-vact="pause">⏸</button>
+    </div>
+    <div id="vpad-act">
+      <button class="vbtn" id="vbtn-trn" data-vact="trn">変換</button>
+      <button class="vbtn" id="vbtn-rot" data-vact="rot">回転</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// VECTORS - Browser Port
+// Original: Dark Veil (1993) for PC-9801
+// ============================================================
+
+const COLS = 9, ROWS = 15;
+const CELL = 36;
+const W = COLS * CELL, H = ROWS * CELL;
+const BORDER = 1;                          // wall border in cells
+const HIDDEN = 2;                          // hidden rows at top (gimmick area)
+const CW = (COLS + 2*BORDER) * CELL;      // full canvas width
+const CH = (ROWS - HIDDEN + BORDER) * CELL; // rows 0-1 hidden; bottom border only
+const OX = BORDER * CELL;                 // game field X offset
+const OY = -HIDDEN * CELL;               // rows 0-1 shifted above canvas top
+
+// ============================================================
+// Sound Effects (Web Audio API synthesis — no extra files)
+// ============================================================
+let _sfxCtx = null;
+function _ac() {
+  if (!_sfxCtx) _sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_sfxCtx.state === 'suspended') _sfxCtx.resume();
+  return _sfxCtx;
+}
+
+function sfx(type) {
+  try {
+    const ac = _ac();
+    const t  = ac.currentTime;
+
+    // Sine/triangle oscillator — soft 2ms attack avoids click artifacts
+    function tone(f0, f1, dur, vol, wave = 'sine', dt = 0) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = wave;
+      o.frequency.setValueAtTime(f0, t + dt);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dt + dur);
+      g.gain.setValueAtTime(0.001, t + dt);
+      g.gain.linearRampToValueAtTime(vol, t + dt + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t + dt); o.stop(t + dt + dur + 0.02);
+    }
+
+    // Wide-band gentle noise (low Q = soft texture, not harsh)
+    function wisp(f0, f1, dur, vol, dt = 0) {
+      const len = Math.ceil(ac.sampleRate * (dur + 0.02));
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const fl  = ac.createBiquadFilter();
+      fl.type = 'bandpass'; fl.Q.value = 0.6; // wide = smooth texture
+      fl.frequency.setValueAtTime(f0, t + dt);
+      if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + dt + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.001, t + dt);
+      g.gain.linearRampToValueAtTime(vol, t + dt + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
+      src.connect(fl); fl.connect(g); g.connect(ac.destination);
+      src.start(t + dt); src.stop(t + dt + dur + 0.02);
+    }
+
+    switch (type) {
+
+      case 'move':
+        // 短くクリアな「コン」 — 低めの三角波ひとつだけ
+        tone(260, 160, 0.06, 0.22, 'triangle');
+        break;
+
+      case 'rotate':
+        // 機械的な「カチッ」 — 中域サイン上昇 + 低域アタック
+        tone(280, 480, 0.09, 0.20, 'sine');
+        tone(100,  65, 0.10, 0.18, 'triangle');
+        break;
+
+      case 'transform':
+        // 回転と区別できる「カシャ」 — 下降気味
+        tone(420, 240, 0.09, 0.20, 'sine');
+        tone(110,  70, 0.10, 0.17, 'triangle');
+        break;
+
+      case 'lock':
+        // 重みのある「ドン」 — 低域三角波 + 中域クリック
+        tone(110,  38, 0.25, 0.50, 'triangle');   // 重い低音
+        tone(260, 160, 0.07, 0.28, 'triangle');   // アタック感
+        wisp(400,  200, 0.12, 0.18);              // 着地の質感（控えめ）
+        break;
+
+      case 'clear': {
+        // アニメーション長に合わせた「しゅわーん」
+        // waveDur = (maxIdx * 70 + 200) ms ≒ 0.27〜0.90s
+        const dur = Math.max(window._lastClearDur || 0.27, 0.20);
+        const n   = window._lastClearCount || 2;
+        const fPeak = 600 + n * 150;            // ブロック数で音域が上がる
+        // ① ワイドノイズスウィープ（しゅわー本体）
+        wisp(200, fPeak, dur, 0.38);
+        // ② 三角波の上昇ハーモニー（3声、少しずつずらして厚みを出す）
+        const fBase = 300 + n * 15;
+        [1, 1.5, 2].forEach((r, i) =>
+          tone(fBase * r, fBase * r * 1.8, dur * 0.85, 0.11, 'sine', i * 0.018)
+        );
+        break;
+      }
+
+      case 'chain': {
+        // clearよりも明るく高い音、連鎖数でピッチ上昇
+        const dur = Math.max(window._lastClearDur || 0.27, 0.20);
+        const c   = Math.min(window._lastChain || 2, 7);
+        const f0  = 400 * Math.pow(1.18, c - 2);
+        wisp(f0 * 0.7, f0 * 2.5, dur * 0.85, 0.32);
+        [1, 1.25, 1.67, 2].forEach((r, i) =>
+          tone(f0 * r, f0 * r * 2, dur * 0.8, 0.13, 'sine', i * 0.025)
+        );
+        break;
+      }
+
+      case 'ice':
+        // 高域サイン波3本 + 控えめなハイウィスプ — 「チャリン」「シャン」
+        tone(3200, 1200, 0.20, 0.20, 'sine');
+        tone(2100, 4200, 0.12, 0.16, 'sine');
+        tone(1500,  800, 0.18, 0.13, 'sine');
+        wisp(2500, 5000, 0.14, 0.14);
+        break;
+    }
+  } catch (e) {}
+}
+
+// ============================================================
+// Music System
+// ============================================================
+const TRACKS = {
+  opening:        { src: 'music/music1.mp3',  loop: false, title: 'Into the dangerous grave' },
+  title:          { src: 'music/music2.mp3',  loop: false, title: 'Pharaoh' },
+  stageStart:     { src: 'music/music3.mp3',  loop: false, title: 'Ready' },
+  stage0:         { src: 'music/music4.mp3',  loop: true,  title: 'The masked king' },
+  stage1:         { src: 'music/music5.mp3',  loop: true,  title: 'Mystic pyramid power' },
+  stage2:         { src: 'music/music6.mp3',  loop: true,  title: 'The singing Nile' },
+  stageClear:     { src: 'music/music7.mp3',  loop: false, title: 'Stage clear' },
+  gameEnding:     { src: 'music/music8.mp3',  loop: false, title: "Osiris' leftover" },
+  gameOver:       { src: 'music/music9.mp3',  loop: true,  title: 'The hunter changed to mummy' },
+  goodScore:      { src: 'music/music10.mp3', loop: true,  title: 'Better victors' },
+  hiScore:        { src: 'music/music11.mp3', loop: true,  title: 'The king of kings' },
+  practice:       { src: 'music/music12.mp3', loop: true,  title: "The Sphinx's riddle" },
+  practiceEnding: { src: 'music/music13.mp3', loop: false, title: 'An only treasure' },
+};
+
+let bgmAudio = null;
+let bgmKey   = null;
+let bgmNext  = null;         // track key to chain after current ends
+let bgmEndCallback = null;   // arbitrary callback to fire after current ends
+let waitingForMusic = false; // block drop/input during stageStart fanfare
+
+function playMusic(key, nextKey, forceOnce) {
+  const track = TRACKS[key];
+  if (!track) return;
+  // Don't restart a looping track already playing
+  if (bgmKey === key && bgmAudio && !bgmAudio.ended && bgmAudio.loop) return;
+  if (bgmAudio) { bgmAudio.pause(); bgmAudio = null; }
+  bgmEndCallback = null;   // clear any stale callback from previous track
+  // Leaving stageStart → unblock gameplay
+  if (key !== 'stageStart') waitingForMusic = false;
+  bgmKey  = key;
+  bgmNext = nextKey ?? null;
+  const audio = new Audio(track.src);
+  audio.loop  = forceOnce ? false : track.loop;
+  audio.volume = 0.72;
+  bgmAudio = audio;
+  audio.addEventListener('ended', () => {
+    if (audio !== bgmAudio) return;  // stale listener
+    bgmKey = null; bgmAudio = null;
+    if (bgmNext) {
+      const nk = bgmNext; bgmNext = null; playMusic(nk);
+    } else if (bgmEndCallback) {
+      const cb = bgmEndCallback; bgmEndCallback = null; cb();
+    }
+  });
+  const titleToShow = track.title;
+  const playPromise = audio.play();
+  playPromise.then(() => {
+    showTrackTitle(titleToShow);
+  }).catch(() => {
+    waitingForMusic = false;
+    if (bgmEndCallback) { const cb = bgmEndCallback; bgmEndCallback = null; cb(); }
+    // Retry on first user interaction
+    const retryAudio = audio;
+    function retryPlay() {
+      if (bgmAudio !== retryAudio) return;  // another track took over — skip
+      retryAudio.play().then(() => showTrackTitle(titleToShow)).catch(() => {});
+    }
+    document.addEventListener('pointerdown', retryPlay, { once: true });
+    document.addEventListener('keydown',     retryPlay, { once: true });
+  });
+}
+
+function stopMusic() {
+  if (bgmAudio) { bgmAudio.pause(); bgmAudio = null; }
+  bgmKey = null; bgmNext = null;
+}
+
+function togglePause() {
+  paused = !paused;
+  if (paused) {
+    bgmAudio?.pause();
+    // Instantly finish all in-progress animations so the field state is consistent
+    for (const p of clearParticles) {
+      if (!p.removed) grid[p.r][p.c] = EMPTY; // ensure block is gone from grid
+    }
+    clearParticles = [];
+    for (const p of fallParticles) {
+      if (!p.done && !p.isIce) grid[p.toR][p.c] = p.value; // commit block to destination
+    }
+    fallParticles = [];
+    iceParticles  = [];
+    scorePopups   = [];
+    chainDisplay  = null;
+    // pendingSettle / pendingSpawn flags are left intact so the game resumes correctly
+  } else {
+    bgmAudio?.play().catch(() => {});
+  }
+}
+
+function currentStageTrack() {
+  if (practiceMode) return 'practice';
+  return ['stage0','stage1','stage2'][stageIdx % 3];
+}
+
+// ============================================================
+// High Score System
+// ============================================================
+function loadHiScores() {
+  try {
+    const d = JSON.parse(localStorage.getItem('vectors_hiscores') || '[]');
+    return Array.isArray(d) ? d.slice(0, 5) : [];
+  } catch { return []; }
+}
+
+// Insert newScore into hi-score list. Returns rank (1-5) if it qualifies, 0 if not.
+function insertHiScore(newScore) {
+  const scores = loadHiScores();
+  const now = new Date();
+  const date = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  const entry = { score: newScore, stage, date };
+  scores.push(entry);
+  scores.sort((a, b) => b.score - a.score);
+  const rank = scores.indexOf(entry) + 1;  // same object ref
+  if (rank > 5) return 0;
+  localStorage.setItem('vectors_hiscores', JSON.stringify(scores.slice(0, 5)));
+  return rank;
+}
+
+// Check score against hi-score list; if it qualifies show the screen then call onDone,
+// otherwise call onDone immediately. Never shows in practice mode or for 0 score.
+function checkAndShowHiScore(onDone) {
+  if (practiceMode || score === 0) { onDone(); return; }
+  const rank = insertHiScore(score);
+  if (rank > 0) {
+    showHiScoreScreen(rank, onDone);
+  } else {
+    onDone();
+  }
+}
+
+// newRank: 1-5 after qualifying, 0 for view-only (from title screen)
+// callback: called on CONTINUE/BACK; if null, showTitle is used
+function showHiScoreScreen(newRank, callback) {
+  const scores = loadHiScores();
+  if (newRank > 0) playMusic(newRank === 1 ? 'hiScore' : 'goodScore');
+
+  const RANK_LABELS = ['1ST','2ND','3RD','4TH','5TH'];
+  let rowsHtml = '';
+  for (let i = 0; i < 5; i++) {
+    const e = scores[i];
+    const isNew = (i + 1) === newRank;
+    const scoreStr = e ? e.score.toLocaleString() : '---';
+    const stageStr = e ? `ST.${String(e.stage).padStart(2,'0')}` : '';
+    const dateStr  = e ? e.date : '';
+    rowsHtml += `
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;
+        ${isNew ? 'background:rgba(255,215,0,0.08);border-left:3px solid #ffd700;' : 'border-left:3px solid transparent;'}">
+        <span style="width:30px;font-size:11px;letter-spacing:1px;text-align:center;
+          color:${isNew ? '#ffd700' : '#445566'};">${RANK_LABELS[i]}</span>
+        <span style="width:38px;font-size:10px;text-align:center;letter-spacing:1px;
+          color:${isNew ? '#ffdd88' : '#445566'};">${stageStr}</span>
+        <span style="width:90px;text-align:right;font-family:'Courier New',monospace;
+          letter-spacing:2px;font-size:${isNew ? '17px' : '14px'};
+          color:${isNew ? '#ffd700' : (e ? '#aaccff' : '#334455')};
+          ${isNew ? 'animation:hsNew 0.7s ease-in-out infinite alternate;' : ''}">${scoreStr}</span>
+        <span style="font-size:10px;color:${isNew ? '#ffcc88' : '#445566'};
+          min-width:68px;">${dateStr}</span>
+        ${isNew ? '<span style="font-size:12px;color:#ffd700;animation:hsNew 0.5s ease-in-out infinite alternate;">★ NEW</span>' : ''}
+      </div>`;
+  }
+
+  const btnLabel = newRank > 0 ? 'CONTINUE' : 'BACK';
+  const cb = callback ?? showTitle;
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = '';
+  ov.style.overflowY = '';
+  ov.innerHTML = `
+    <div style="text-align:center;padding:20px 28px;">
+      <div style="font-size:10px;letter-spacing:5px;color:#6688aa;margin-bottom:6px;">VECTORS</div>
+      <div style="font-size:26px;letter-spacing:7px;color:#ffd700;font-family:'Courier New',monospace;
+        text-shadow:0 0 18px #ffd700,0 0 40px rgba(255,215,0,0.4);margin-bottom:22px;">HIGH SCORE</div>
+      <div style="border:1px solid rgba(255,215,0,0.22);background:rgba(0,0,12,0.96);">
+        ${rowsHtml}
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:22px;">
+        <button id="hs-continue-btn" style="padding:10px 28px;background:#223366;
+          color:#ffd700;border:1px solid #ffd700;font-family:inherit;font-size:14px;
+          cursor:pointer;letter-spacing:2px;">${btnLabel}</button>
+        ${newRank === 0 ? `<button id="hs-reset" style="padding:10px 16px;background:#1a0000;
+          color:#aa4444;border:1px solid #663333;font-family:inherit;font-size:12px;
+          cursor:pointer;letter-spacing:1px;">RESET</button>` : ''}
+      </div>
+    </div>`;
+  ov.style.display = 'flex';
+  screenState = 'hiscore';
+  const hsBtn = document.getElementById('hs-continue-btn');
+  hsBtn.onmouseenter = () => { if (!hsBtn.classList.contains('kf')) hsBtn.style.background = '#334477'; };
+  hsBtn.onmouseleave = () => { if (!hsBtn.classList.contains('kf')) hsBtn.style.background = '#223366'; };
+  hsBtn.onclick = cb;
+  if (newRank === 0) {
+    const resetBtn = document.getElementById('hs-reset');
+    resetBtn.onmouseenter = () => resetBtn.style.background = '#2a0000';
+    resetBtn.onmouseleave = () => resetBtn.style.background = '#1a0000';
+    resetBtn.onclick = () => {
+      if (confirm('ハイスコアをリセットしますか？')) {
+        localStorage.removeItem('vectors_hiscores');
+        showHiScoreScreen(0, cb);
+      }
+    };
+    fgSetup([[hsBtn, resetBtn]], 0, 0);
+  } else {
+    fgSetup([[hsBtn]]);
+  }
+}
+
+function showTrackTitle(title) {
+  const el   = document.getElementById('track-title');
+  const text = document.getElementById('track-title-text');
+  if (!el || !text) return;
+  text.textContent = title ?? '';
+  el.classList.remove('tt-show');
+  void el.offsetWidth; // force reflow to restart animation
+  el.classList.add('tt-show');
+}
+
+// Cell types
+const EMPTY = 0, WALL = 1;
+// Vec1: 2=Left 3=Down 4=Right 5=Up
+// Vec2: 6=Left 7=Down 8=Right 9=Up
+// a=10=GrayWall  b=11=IceWall
+const GRAY_WALL = 10, ICE_WALL = 11;
+
+// Direction offsets: Left, Down, Right, Up
+const DIR_OFFSET = [[0,-1],[1,0],[0,1],[-1,0]]; // [dr,dc]
+function cellDir(v) {
+  // returns 0=Left,1=Down,2=Right,3=Up or -1 if not a vector
+  if (v>=2&&v<=5) return v-2;
+  if (v>=6&&v<=9) return v-6;
+  return -1;
+}
+function cellColor(v) {
+  if (v>=2&&v<=5) return 1; // Vec1
+  if (v>=6&&v<=9) return 2; // Vec2
+  return 0;
+}
+function isVector(v) { return v>=2&&v<=9; }
+function isObstacle(v) { return v===WALL||v===GRAY_WALL||v===ICE_WALL; }
+
+// ============================================================
+// Stage data (parsed from VECTORS.fdi)
+// ============================================================
+const MAIN_STAGES_RAW = [
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+ba00000ab
+ab00500ba
+ba05950ab
+ab59995ba`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+900000009
+1a00000a1
+180000061
+11a000a11
+118000611
+111a0a111
+111806111
+111191111
+111191111`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+0000b0000
+000070000
+0000b0000
+000090000
+0000b0000
+000070000
+0000b0000
+000090000
+0966b8890
+088989660`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+008300091
+009310091
+009831091
+009183191
+009118391
+009101891
+089100191`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000020000
+008452000
+039645300
+745379637
+895289526`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+0000a0000
+0000b0000
+0000b0000
+000000000
+000000000
+000000000
+000b0b000
+000406000
+0009a9000`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+007666600
+006322960
+07b2b5b90
+074777590
+087444890
+0b88889b0`,
+`000000000
+aaaa0aaaa
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000006000
+000067000
+000078000
+000089000
+000090000`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+0000a0000
+000070000
+000888000
+000999000
+008888800
+009999900`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+aaaaaaaa0
+000000000
+000000000
+000000000
+7bbbbbb90
+7bbbbbb90
+788888890
+8bbbbbbb0
+b66666660
+888888880`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+00a000a00
+002000400
+004a00200
+0028004a0
+004600260
+00280a480
+0a4608260
+062806480
+084608260`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+001000100
+000000000
+000000000
+000070000
+040888020
+0807a7060
+040888020
+040999020`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+800000006
+b0000000b
+800000006
+b0001000b
+800000006
+b0006000b
+800bbb006
+b00b9b00b
+89bbbbb96
+096666690`,
+`baba09bbb
+baba09bab
+030000020
+0b00000b0
+bbb000bbb
+0b00a00b0
+0b0000b0b
+b0b0000b0
+0b0000b0b
+000000000
+000000000
+000000000
+000707303
+706609709
+889444889`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+300000002
+7b0bbb0b5
+3b00b00b5
+7b00b00b9
+3b7bbb6b5
+7b89b89b9
+3bbbbbbb5
+7bbb9bbb9
+484848485`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+0676b8980
+0b6789850
+0bb898550
+0b8989750
+089855666`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+087987990
+078967980
+098899870
+068667890
+098878980
+067898990
+098687980
+069687980
+076976990
+024525520`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+4000a0000
+9b00a0000
+990040000
+9b00700bb
+9600b00bb
+9b0026037
+9b0096062`,
+`000000000
+000000000
+0b0b0b0b0
+0b3b0b3b0
+0b0b0b0b0
+0b9b0b3b0
+0b0b0b0b0
+0b36083b0
+0b08060b0
+543909360
+840b0b0b0
+9b3b0b3b0
+ab7b0b0b5
+bb44036b9
+aba402aba`,
+`000000000
+000000000
+000000000
+000000000
+000200000
+000020000
+000b3b000
+003737300
+000333000
+000030000
+000030000
+930080079
+bb45552bb
+045444540
+566666665`,
+`000000000
+000000000
+b0000000b
+b0000000b
+000000000
+700000009
+700000009
+700101009
+700000009
+7b00000b9
+7bb000bb9
+7bbb0bbb9
+73bbbbb39
+78bb9bb69
+888888889`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+880000066
+879b7b976
+bb99799bb
+889b7b966
+889343966
+5222b4445`,
+`777707777
+333303333
+000000000
+000000000
+000000000
+0bbb1bbb0
+0b00100bb
+0bbb1bbb0
+000000000
+000000000
+000000000
+bbbbbbbbb
+999999979
+999999999
+000000000`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000070000
+0000b0000
+000070000
+000bbb000
+000484000
+00bb7bb00
+004484400
+0bb896bb0
+022262220
+bbbbbbbbb`
+];
+
+const PRACTICE_STAGES_RAW = [
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+003000000
+005000900`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+032000060
+045000890`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000208000
+032509870
+03a426a70
+03a519a70
+044519660`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+440000000
+322207660
+3bb507bb9
+322507669
+3bb507bb9
+4445b8889`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+430088700
+543091870
+514391180
+511391176
+522296669`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+444308880
+5bb309bb0
+5bb309bb0
+522209666`,
+`000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000300007
+000300007
+044300887
+422200666`
+];
+
+function parseStage(raw) {
+  const grid = [];
+  for (const line of raw.trim().split('\n')) {
+    const row = [];
+    for (const ch of line.trim()) {
+      const v = parseInt(ch, 16);
+      row.push(isNaN(v) ? 0 : v);
+    }
+    while (row.length < COLS) row.push(0);
+    grid.push(row.slice(0, COLS));
+  }
+  while (grid.length < ROWS) grid.unshift(new Array(COLS).fill(0));
+  return grid;
+}
+
+const MAIN_STAGES = MAIN_STAGES_RAW.map(parseStage);
+const PRACTICE_STAGES = PRACTICE_STAGES_RAW.map(parseStage);
+
+// ============================================================
+// Piece generation
+// ============================================================
+// Each piece = 3 cells vertically, each cell is a vector type (2-9)
+// Color1: 2,3,4,5  Color2: 6,7,8,9
+
+function randomVec(color) {
+  const dir = Math.floor(Math.random() * 4); // 0=L,1=D,2=R,3=U
+  return color === 1 ? dir + 2 : dir + 6;
+}
+
+function randomPiece() {
+  // Falling pieces are Vec1 (gray) only
+  return [0,1,2].map(() => randomVec(1));
+}
+
+// ============================================================
+// Game state
+// ============================================================
+let grid, piece, pieceCol, pieceRow, nextPiece;
+let score, stage, stageIdx, practiceMode, gameOver, paused, cleared;
+let clearSkipAt = Infinity; // performance.now() time after which confirm skips to next stage
+let dropTimer, dropInterval, pendingSpawn;
+let lastTime = 0;
+
+// Particle system for clear animation
+// Each particle: { r, c, value, waveStart, waveIdx, cellDelay, fadeDur }
+let clearParticles = [];
+// Ice break particles: { r, c, start, dur }
+let iceParticles = [];
+// Fall animation particles: { value, fromR, toR, c, startMs, dur, isIce }
+// Source cell already cleared from grid; destination committed when done.
+let fallParticles = [];
+const FALL_DUR = 140; // ms per fall (constant regardless of distance)
+// Score popup: { points, cx, cy, startMs, dur, chain }
+let scorePopups = [];
+// Chain display: { count, startMs, dur }
+let chainDisplay = null;
+// Game-over stuck-cell flash
+// { cells:[[r,c]...], start: timestamp, duration: ms }
+let goAnim = null;
+// Initially stuck cells (ignored for game-over)
+let initiallyStuck = new Set();
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas.getContext('2d');
+canvas.width = CW; canvas.height = CH;
+
+function initGame(stageIndex, practice) {
+  practiceMode = practice;
+  stageIdx = stageIndex;
+  const stages = practice ? PRACTICE_STAGES : MAIN_STAGES;
+  grid = stages[stageIdx].map(r => [...r]);
+  score = 0;
+  chainCount = 0; chainShown = 0;
+  stage = stageIdx + 1;
+  gameOver = false;
+  paused = false;
+  cleared = false;
+  pendingSpawn = false;
+  clearParticles = [];
+  iceParticles = [];
+  fallParticles = [];
+  scorePopups = [];
+  chainDisplay = null;
+  goAnim = null;
+  pendingSettle = false;
+  nextPiece = randomPiece();
+  pieceCol = Math.floor(COLS / 2);
+  pieceRow = -2;
+  dropInterval = 900;
+  dropTimer = 0;
+  // Record initially stuck gold cells (design feature, not game-over)
+  initiallyStuck = new Set();
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (isVec2Stuck(r, c)) initiallyStuck.add(r * COLS + c);
+  // Practice mode: defer loop check until stageStart music finishes
+  if (practiceMode) {
+    piece = null;
+    pendingSettle = true;
+  } else {
+    piece = randomPiece();
+  }
+  updateUI();
+  document.getElementById('overlay').style.display = 'none';
+  screenState = 'game';
+  waitingForMusic = true;
+  playMusic('stageStart', currentStageTrack());
+}
+
+// ============================================================
+// Loop detection (directed cycle in vector graph)
+// ============================================================
+function getTarget(r, c, v) {
+  const d = cellDir(v);
+  if (d < 0) return null;
+  const [dr, dc] = DIR_OFFSET[d];
+  return [r + dr, c + dc];
+}
+
+function findLoops() {
+  // Find all directed cycles in the vector graph (color-independent)
+  // Each cell has exactly one outgoing edge (its arrow direction)
+  // A cycle exists when following arrows returns to the start cell
+  const inStack = Array.from({length:ROWS}, ()=>new Array(COLS).fill(false));
+  const loops = [];
+
+  function dfs(startR, startC, r, c, path) {
+    const v = grid[r][c];
+    if (!isVector(v)) return;
+    const target = getTarget(r, c, v);
+    if (!target) return;
+    const [nr, nc] = target;
+    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return;
+    // Reached start = cycle found
+    if (nr === startR && nc === startC && path.length >= 2) {
+      loops.push([...path]);
+      return;
+    }
+    // Reached a node already in current path (but not start) = stop
+    if (inStack[nr][nc]) return;
+    // Target must be a vector to continue
+    if (!isVector(grid[nr][nc])) return;
+    inStack[nr][nc] = true;
+    path.push([nr, nc]);
+    dfs(startR, startC, nr, nc, path);
+    path.pop();
+    inStack[nr][nc] = false;
+  }
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (!isVector(grid[r][c])) continue;
+      inStack[r][c] = true;
+      dfs(r, c, r, c, [[r,c]]);
+      inStack[r][c] = false;
+    }
+  }
+  return loops;
+}
+
+// Wave animation constants
+const CELL_DELAY = 70;  // ms between consecutive cells in loop wave
+const FADE_DUR   = 200; // ms for each cell to fade out
+
+function clearLoopsWithAnim(waveBaseMs) {
+  // waveBaseMs: performance.now()-relative start time for first cell
+  const loops = findLoops();
+  if (loops.length === 0) return { cleared: false, waveDur: 0 };
+
+  // Deduplicate cells; keep first-occurrence loop index for each cell
+  const seen = new Map(); // key -> { r, c, value, loopIdx }
+  for (const loop of loops) {
+    for (let i = 0; i < loop.length; i++) {
+      const [r, c] = loop[i];
+      const key = r * COLS + c;
+      if (!seen.has(key)) seen.set(key, { r, c, value: grid[r][c], loopIdx: i });
+    }
+  }
+
+  // Create particles BEFORE removing from grid
+  const maxIdx = Math.max(...[...seen.values()].map(p => p.loopIdx));
+  for (const { r, c, value, loopIdx } of seen.values()) {
+    clearParticles.push({
+      r, c, value,
+      waveStart: waveBaseMs + loopIdx * CELL_DELAY,
+      fadeDur: FADE_DUR,
+      removed: false   // removed from grid when waveStart is reached
+    });
+  }
+  // Grid cells are removed lazily in update() when waveStart fires
+
+  const count = seen.size;
+  chainCount++;
+  const gained = count * count * 10 * chainCount;
+  score += gained;
+  window._lastChain = chainCount;
+  window._lastClearCount = count;
+  window._lastClearDur = (maxIdx * CELL_DELAY + FADE_DUR) / 1000; // seconds
+  sfx(chainCount >= 2 ? 'chain' : 'clear');
+
+  // Score popup: center of cleared cells
+  const cells = [...seen.values()];
+  const cx = (cells.reduce((s, p) => s + p.c, 0) / cells.length + 0.5) * CELL;
+  const cy = (cells.reduce((s, p) => s + p.r, 0) / cells.length + 0.5) * CELL;
+  scorePopups.push({ points: gained, cx, cy, startMs: waveBaseMs, dur: 1400, chain: chainCount });
+
+  // Chain display (3連鎖以上、このsettleシーケンスで未表示の連鎖数のみ)
+  if (chainCount >= 3 && chainCount > chainShown) {
+    chainDisplay = { count: chainCount, startMs: waveBaseMs, dur: 900 };
+    chainShown = chainCount;
+  }
+
+  const waveDur = maxIdx * CELL_DELAY + FADE_DUR;
+  return { cleared: true, waveDur };
+}
+
+function applyGravity(nowMs) {
+  const t = nowMs ?? performance.now();
+  let changed = false;
+  // Track destinations reserved within this call so blocks in the same column
+  // stack correctly (same logic as the old grid[nr][c]=v reservation).
+  const reserved = new Set(); // key: r * COLS + c
+  for (let c = 0; c < COLS; c++) {
+    for (let r = ROWS - 2; r >= 0; r--) {
+      const v = grid[r][c];
+      if (v === EMPTY) continue;
+      if (!isVector(v) && v !== GRAY_WALL && v !== ICE_WALL) continue; // WALL(1) is fixed
+      if (grid[r+1][c] !== EMPTY) continue;
+      let nr = r;
+      while (nr + 1 < ROWS && grid[nr+1][c] === EMPTY && !reserved.has((nr+1)*COLS+c)) nr++;
+      if (nr === r) continue; // no actual movement
+      grid[r][c] = EMPTY;
+      reserved.add(nr * COLS + c);
+      if (v === ICE_WALL) {
+        fallParticles.push({ value: v, fromR: r, toR: nr, c, startMs: t, dur: FALL_DUR, isIce: true });
+      } else {
+        fallParticles.push({ value: v, fromR: r, toR: nr, c, startMs: t, dur: FALL_DUR, isIce: false });
+      }
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Async settle: loops clear first (animation), then gravity, repeat until stable.
+// pendingSettle=true means "run doSettleStep() once current animation finishes".
+let pendingSettle = false;
+let chainCount = 0;  // increments each time a loop is cleared in one settle sequence
+let chainShown = 0;  // highest chain count already displayed this settle sequence
+let debugMode = false;
+let drawNow = 0; // updated each frame for animation use inside drawCell
+
+function doSettleStep(iter) {
+  if ((iter ?? 0) >= 20) { pendingSpawn = true; updateUI(); return; }
+  const now = performance.now();
+
+  // 1. Check for loops FIRST — before any gravity
+  const { cleared } = clearLoopsWithAnim(now);
+  if (cleared) {
+    // Wait for animation to finish, then continue settling
+    pendingSettle = true;
+    pendingSpawn  = false;
+    updateUI();
+    return;
+  }
+
+  // 2. No loops — apply gravity (animated)
+  const g = applyGravity(now);
+  if (!g) {
+    // Nothing to do — stable
+    pendingSettle = false;
+    pendingSpawn  = true;
+    updateUI();
+    return;
+  }
+
+  // 3. Gravity launched fall animation — wait for it, then re-check for loops
+  pendingSettle = true;
+  pendingSpawn  = false;
+  updateUI();
+}
+
+// ============================================================
+// Piece mechanics
+// ============================================================
+function canPlace(row, col, p) {
+  for (let i = 0; i < 3; i++) {
+    const r = row + i, c = col;
+    if (c < 0 || c >= COLS) return false;
+    if (r >= ROWS) return false;
+    if (r >= 0 && grid[r][c] !== EMPTY) return false;
+  }
+  return true;
+}
+
+function lockPiece() {
+  for (let i = 0; i < 3; i++) {
+    const r = pieceRow + i;
+    if (r >= 0 && r < ROWS) grid[r][pieceCol] = piece[i];
+  }
+  piece = null;
+  chainCount = 0; chainShown = 0;
+  sfx('lock');
+  doSettleStep();
+}
+
+function spawnNextPiece() {
+  // Called after animation completes
+  if (isStageCleared()) {
+    cleared = true;
+    clearSkipAt = performance.now() + 1500;
+    scorePopups = [];
+    chainDisplay = null;
+    score += 1000;
+    updateUI();
+    playMusic('stageClear');
+    bgmEndCallback = nextStage;
+    return;
+  }
+  // Check for newly-stuck gold blocks
+  const stuck = getNewlyStuckGold();
+  if (stuck.length > 0) {
+    gameOver = true;
+    scorePopups = [];
+    chainDisplay = null;
+    startGoAnim(stuck);
+    return;
+  }
+  // Spawn
+  piece = nextPiece;
+  nextPiece = randomPiece();
+  pieceCol = Math.floor(COLS / 2);
+  pieceRow = -2;
+  if (!canPlace(pieceRow + 2, pieceCol, piece)) {
+    gameOver = true;
+    scorePopups = [];
+    chainDisplay = null;
+    playMusic('gameOver');
+    checkAndShowHiScore(() =>
+      showOverlay('GAME OVER', `フィールドが詰まりました  SCORE: ${score}`, 'RETRY'));
+    return;
+  }
+  updateUI();
+}
+
+// -------- Game-over: stuck gold detection --------
+
+// Returns true if (r,c) is in a vertical column gap < 3 cells tall,
+// enclosed above by an obstacle. A 3-tall piece can never enter such a gap.
+function isInTightGap(r, c) {
+  let top = r;
+  while (top > 0 && grid[top - 1][c] !== WALL) top--;
+  if (top === 0) return false;          // not enclosed above — pieces can fall in
+  let bot = r;
+  while (bot < ROWS - 1 && grid[bot + 1][c] !== WALL) bot++;
+  return (bot - top + 1) < 3;
+}
+
+function isVec2Stuck(r, c) {
+  // Chain-follow from Vec2 cell; return true if chain can NEVER form a loop
+  if (cellColor(grid[r][c]) !== 2) return false;
+  // Case 3: gold itself is trapped in a tight gap — no piece can ever enter
+  if (isInTightGap(r, c)) return true;
+  const visited = new Set([r * COLS + c]);
+  let [cr, cc] = [r, c];
+  for (let i = 0; i <= ROWS * COLS; i++) {
+    const v = grid[cr][cc];
+    if (!isVector(v)) return true;
+    const t = getTarget(cr, cc, v);
+    if (!t) return true;
+    const [nr, nc] = t;
+    if (nr < 0) return false;          // top OOB = open (pieces fall in)
+    if (nr >= ROWS || nc < 0 || nc >= COLS) return true; // other OOB = wall
+    const tv = grid[nr][nc];
+    if (tv === EMPTY) {
+      // Case 4: target is empty but in a tight gap — no piece can ever land there
+      if (isInTightGap(nr, nc)) return true;
+      return false;                   // otherwise a piece can reach this cell
+    }
+    if (isObstacle(tv)) return true;   // hard wall
+    const key = nr * COLS + nc;
+    if (visited.has(key)) return false; // came back to visited cell = loop exists
+    visited.add(key);
+    [cr, cc] = [nr, nc];
+  }
+  return true;
+}
+
+// Debug: trace the full chain from a Vec2 cell and return analysis
+// Returns { stuck, path:[[r,c],...], reason, termR, termC }
+function analyzeVec2Chain(r, c) {
+  const path = [[r, c]];
+  const visited = new Set([r * COLS + c]);
+  let [cr, cc] = [r, c];
+  for (let i = 0; i <= ROWS * COLS; i++) {
+    const v = grid[cr][cc];
+    if (!isVector(v))
+      return { stuck: true,  path, reason: 'non-vector', termR: cr, termC: cc };
+    const t = getTarget(cr, cc, v);
+    if (!t)
+      return { stuck: true,  path, reason: 'no-target',  termR: cr, termC: cc };
+    const [nr, nc] = t;
+    if (nr < 0)
+      return { stuck: false, path, reason: 'top-open',   termR: nr, termC: nc };
+    if (nr >= ROWS || nc < 0 || nc >= COLS)
+      return { stuck: true,  path, reason: 'side-wall',  termR: nr, termC: nc };
+    const tv = grid[nr][nc];
+    if (tv === EMPTY) {
+      if (isInTightGap(nr, nc))
+        return { stuck: true,  path, reason: 'tight-gap', termR: nr, termC: nc };
+      return { stuck: false, path, reason: 'empty',      termR: nr, termC: nc };
+    }
+    if (isObstacle(tv))
+      return { stuck: true,  path, reason: 'obstacle',   termR: nr, termC: nc };
+    const key = nr * COLS + nc;
+    if (visited.has(key))
+      return { stuck: false, path, reason: 'loop',       termR: nr, termC: nc };
+    visited.add(key);
+    path.push([nr, nc]);
+    [cr, cc] = [nr, nc];
+  }
+  return { stuck: true, path, reason: 'maxiter', termR: cr, termC: cc };
+}
+
+// Compute "effective wall" classification for each cell (for debug display)
+// Returns 2D array of: 'hard-wall' | 'eff-wall' | 'ice-mobile' | 'tight-gap' | 'open'
+function getDebugCellStatus() {
+  const s = Array.from({length: ROWS}, () => new Array(COLS).fill('open'));
+
+  // Mark hard walls
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      if (v === WALL || v === GRAY_WALL) s[r][c] = 'hard-wall';
+    }
+
+  // Ice: bottom-up pass — ice on solid base = effective wall
+  for (let r = ROWS - 1; r >= 0; r--) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] !== ICE_WALL) continue;
+      const br = r + 1;
+      const belowSolid = br >= ROWS ||
+        s[br][c] === 'hard-wall' || s[br][c] === 'eff-wall' ||
+        grid[br][c] === WALL || grid[br][c] === GRAY_WALL;
+      s[r][c] = belowSolid ? 'eff-wall' : 'ice-mobile';
+    }
+  }
+
+  // Tight-gap: column runs of non-wall cells < 3 tall, enclosed above AND below by walls.
+  // A 3-tall piece can never enter — counts ALL cell types (empty, arrows, etc.)
+  for (let c = 0; c < COLS; c++) {
+    let runStart = -1;
+    for (let r = 0; r <= ROWS; r++) {
+      const isWall = r >= ROWS || s[r][c] === 'hard-wall' || s[r][c] === 'eff-wall';
+      if (!isWall) {
+        if (runStart < 0) runStart = r;
+      } else if (runStart >= 0) {
+        const len = r - runStart;
+        // Enclosed (doesn't touch top of field) and too narrow for a 3-tall piece
+        if (runStart > 0 && len < 3)
+          for (let gr = runStart; gr < r; gr++)
+            if (s[gr][c] === 'open' && grid[gr][c] === EMPTY) s[gr][c] = 'tight-gap';
+        runStart = -1;
+      }
+    }
+  }
+
+  return s;
+}
+
+function getNewlyStuckGold() {
+  const result = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const key = r * COLS + c;
+      if (cellColor(grid[r][c]) === 2 &&
+          !initiallyStuck.has(key) &&
+          isVec2Stuck(r, c))
+        result.push([r, c]);
+    }
+  return result;
+}
+
+function startGoAnim(stuckCells) {
+  // Flash stuck cells for GO_FLASH_DUR ms, then show overlay
+  const GO_FLASH_DUR = 2200;
+  goAnim = { cells: stuckCells, start: performance.now(), dur: GO_FLASH_DUR };
+  playMusic('gameOver');
+  setTimeout(() => {
+    goAnim = null;
+    checkAndShowHiScore(() =>
+      showOverlay('GAME OVER', `金色ブロックが消せなくなりました  SCORE: ${score}`, 'RETRY'));
+  }, GO_FLASH_DUR);
+}
+
+function isStageCleared() {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (cellColor(grid[r][c]) === 2) return false;
+  // Also check blocks in mid-fall animation
+  if (fallParticles.some(p => !p.done && cellColor(p.value) === 2)) return false;
+  return true;
+}
+
+function nextStage() {
+  const stages = practiceMode ? PRACTICE_STAGES : MAIN_STAGES;
+  if (stageIdx + 1 < stages.length) {
+    stageIdx++;
+    grid = stages[stageIdx].map(r => [...r]);
+    stage = stageIdx + 1;
+    cleared = false;
+    clearParticles = [];
+    fallParticles = [];
+    iceParticles = [];
+    pendingSpawn = false;
+    pendingSettle = false;
+    // Re-record initially stuck for new stage
+    initiallyStuck = new Set();
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (isVec2Stuck(r, c)) initiallyStuck.add(r * COLS + c);
+    pieceCol = Math.floor(COLS / 2);
+    pieceRow = -2;
+    // Practice mode: defer loop check until stageStart music finishes
+    if (practiceMode) {
+      piece = null;
+      pendingSettle = true;
+    } else {
+      piece = nextPiece;
+      nextPiece = randomPiece();
+    }
+    updateUI();
+    waitingForMusic = true;
+    playMusic('stageStart', currentStageTrack());
+  } else {
+    if (practiceMode) {
+      showScenarioText({
+        text: PRACTICE_ENDING_TEXT,
+        music: 'practiceEnding',
+        onDone: showTitle,
+      });
+    } else {
+      checkAndShowHiScore(() => {
+        showScenarioText({
+          text: ENDING_TEXT,
+          music: 'gameEnding',
+          onDone: showTitle,
+        });
+      });
+    }
+  }
+}
+
+// ============================================================
+// Input
+// ============================================================
+let softDrop = false;
+
+// ============================================================
+// Screen state (for keyboard / gamepad routing)
+// ============================================================
+let screenState = 'title'; // 'title'|'game'|'scenario'|'howto'|'hiscore'|'overlay'|'keyconfig'
+let titleActions = null;   // populated by showTitle()
+
+// ============================================================
+// Key / Gamepad configuration
+// ============================================================
+const KEY_DEFS = [
+  { id:'confirm',  label:'決定 / 回転',      default:'z' },
+  { id:'cancel',   label:'キャンセル / 変換',  default:'x' },
+  { id:'left',     label:'← 移動',           default:'ArrowLeft' },
+  { id:'right',    label:'→ 移動',           default:'ArrowRight' },
+  { id:'up',       label:'↑ 回転(別)',        default:'ArrowUp' },
+  { id:'down',     label:'↓ 落下',           default:'ArrowDown' },
+  { id:'drop',     label:'高速落下(別)',       default:' ' },
+  { id:'pause',    label:'一時停止',          default:'p' },
+];
+const GP_DEFS = [
+  { id:'confirm',  label:'決定 / 回転',       default:0 },  // A
+  { id:'cancel',   label:'キャンセル / 変換',  default:2 },  // X
+  { id:'pause',    label:'一時停止',           default:9 },  // Start
+];
+
+function _loadCfg(key, defs) {
+  try {
+    const s = JSON.parse(localStorage.getItem(key) || '{}');
+    const r = {}; defs.forEach(d => r[d.id] = s[d.id] ?? d.default); return r;
+  } catch { const r = {}; defs.forEach(d => r[d.id] = d.default); return r; }
+}
+function _saveCfg(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch {} }
+
+let keyCfg = {}, gpCfg = {};
+function initKeyCfg() {
+  keyCfg = _loadCfg('vectors_keys', KEY_DEFS);
+  gpCfg  = _loadCfg('vectors_gp',   GP_DEFS);
+}
+
+function keyLabel(k) {
+  if (k === ' ')          return 'Space';
+  if (k === 'ArrowLeft')  return '←';
+  if (k === 'ArrowRight') return '→';
+  if (k === 'ArrowUp')    return '↑';
+  if (k === 'ArrowDown')  return '↓';
+  return k.length === 1 ? k.toUpperCase() : k;
+}
+function gpBtnLabel(n) {
+  return (['A','B','X','Y','LB','RB','LT','RT','Sel','Start','L3','R3','↑','↓','←','→'][n] ?? `Btn${n}`);
+}
+
+// Checks if e.key matches a keyCfg action (case-insensitive for single chars)
+function isKey(e, action) {
+  const cfg = keyCfg[action];
+  if (!cfg) return false;
+  if (cfg.length === 1) return e.key.toLowerCase() === cfg.toLowerCase();
+  return e.key === cfg;
+}
+
+// ============================================================
+// 2D keyboard focus grid
+// ============================================================
+let _fg = [], _fr = 0, _fc = 0;
+
+function fgSetup(grid, r = 0, c = 0) {
+  _fg.forEach(row => row.forEach(el => el?.classList.remove('kf')));
+  _fg = grid;
+  _fr = Math.max(0, Math.min(grid.length - 1, r));
+  _fc = Math.max(0, Math.min((grid[_fr]?.length ?? 1) - 1, c));
+  _fgApply();
+}
+
+function _fgApply() {
+  _fg.forEach(row => row.forEach(el => el?.classList.remove('kf')));
+  _fg[_fr]?.[_fc]?.classList.add('kf');
+}
+
+function fgMove(dr, dc) {
+  if (!_fg.length) return;
+  let nr = _fr, nc = _fc;
+  if (dc !== 0) {
+    const row = _fg[nr] || [];
+    const len = row.length;
+    if (!len) return;
+    let nc2 = ((nc + dc) % len + len) % len;
+    let tries = 0;
+    while (!row[nc2] && tries++ < len) nc2 = ((nc2 + dc) % len + len) % len;
+    nc = nc2;
+  } else if (dr !== 0) {
+    nr = Math.max(0, Math.min(_fg.length - 1, _fr + dr));
+    const row = _fg[nr] || [];
+    if (!row[nc]) {
+      let best = -1;
+      for (let d = 0; d <= row.length; d++) {
+        if (_fc + d < row.length && row[_fc + d]) { best = _fc + d; break; }
+        if (_fc - d >= 0 && row[_fc - d]) { best = _fc - d; break; }
+      }
+      nc = best >= 0 ? best : row.findIndex(e => e) ?? nc;
+    }
+  }
+  _fr = nr; _fc = Math.max(0, nc);
+  _fgApply();
+}
+
+function fgClick() { _fg[_fr]?.[_fc]?.click(); }
+function fgClear() { _fg.forEach(row => row.forEach(el => el?.classList.remove('kf'))); _fg = []; }
+
+// ============================================================
+// Key Config Screen
+// ============================================================
+let _rebinding = null; // { type:'key'|'gp', id:string }
+let _kcRerender = null;
+
+function showKeyConfig(callback) {
+  screenState = 'keyconfig';
+  _rebinding = null;
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = '';
+  ov.style.overflowY = 'auto';
+
+  function renderKC() {
+    const keyRows = KEY_DEFS.map(d => {
+      const isRb = _rebinding?.type === 'key' && _rebinding?.id === d.id;
+      return `<div class="kcrow" id="kc-k-${d.id}" style="display:flex;align-items:center;padding:6px 10px;gap:8px;cursor:pointer;user-select:none;">
+        <span style="flex:1;font-size:11px;color:#9abcdd;">${d.label}</span>
+        <span style="width:62px;text-align:center;font-family:'Courier New',monospace;font-size:12px;
+          padding:2px 4px;border:1px solid ${isRb?'#ffee88':'#335'};
+          color:${isRb?'#ffee88':'#ffd700'};">${isRb ? '...' : keyLabel(keyCfg[d.id])}</span>
+      </div>`;
+    }).join('');
+
+    const gpRows = GP_DEFS.map(d => {
+      const isRb = _rebinding?.type === 'gp' && _rebinding?.id === d.id;
+      return `<div class="kcrow" id="kc-g-${d.id}" style="display:flex;align-items:center;padding:6px 10px;gap:8px;cursor:pointer;user-select:none;">
+        <span style="flex:1;font-size:11px;color:#9abcdd;">${d.label}</span>
+        <span style="width:62px;text-align:center;font-family:'Courier New',monospace;font-size:12px;
+          padding:2px 4px;border:1px solid ${isRb?'#ffee88':'#335'};
+          color:${isRb?'#ffee88':'#ffd700'};">${isRb ? '...' : gpBtnLabel(gpCfg[d.id])}</span>
+      </div>`;
+    }).join('');
+
+    ov.innerHTML = `
+      <div style="text-align:center;padding:14px 16px 18px;width:100%;max-width:310px;">
+        <div style="font-size:9px;letter-spacing:4px;color:#6688aa;margin-bottom:4px;">SETTINGS</div>
+        <div style="font-size:20px;letter-spacing:4px;color:#ffd700;margin-bottom:12px;">KEY CONFIG</div>
+        <div style="color:#88bbff;font-size:9px;letter-spacing:2px;margin-bottom:4px;text-align:left;">KEYBOARD</div>
+        <div style="border:1px solid rgba(100,150,200,0.2);margin-bottom:10px;">${keyRows}</div>
+        <div style="color:#88bbff;font-size:9px;letter-spacing:2px;margin-bottom:4px;text-align:left;">GAMEPAD</div>
+        <div style="border:1px solid rgba(100,150,200,0.2);margin-bottom:12px;">${gpRows}</div>
+        ${_rebinding ? `<div style="font-size:10px;color:#ffee88;letter-spacing:1px;margin-bottom:8px;">
+          新しい${_rebinding.type==='key'?'キー':'ボタン'}を押してください &nbsp; Escでキャンセル</div>` : ''}
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button id="kc-reset" style="padding:7px 14px;background:#1a0000;color:#cc5555;border:1px solid #553333;
+            font-family:inherit;font-size:11px;cursor:pointer;letter-spacing:1px;">RESET</button>
+          <button id="kc-back" style="padding:7px 22px;background:#223366;color:#ffd700;border:1px solid #ffd700;
+            font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:2px;">BACK</button>
+        </div>
+      </div>`;
+    ov.style.display = 'flex';
+
+    KEY_DEFS.forEach(d => {
+      const el = document.getElementById(`kc-k-${d.id}`);
+      if (!el) return;
+      el.onmouseenter = () => { if (!el.classList.contains('kf')) el.style.background = 'rgba(255,215,0,0.05)'; };
+      el.onmouseleave = () => { if (!el.classList.contains('kf')) el.style.background = ''; };
+      el.onclick = () => { _rebinding = { type:'key', id:d.id }; renderKC(); };
+    });
+    GP_DEFS.forEach(d => {
+      const el = document.getElementById(`kc-g-${d.id}`);
+      if (!el) return;
+      el.onmouseenter = () => { if (!el.classList.contains('kf')) el.style.background = 'rgba(255,215,0,0.05)'; };
+      el.onmouseleave = () => { if (!el.classList.contains('kf')) el.style.background = ''; };
+      el.onclick = () => { _rebinding = { type:'gp', id:d.id }; renderKC(); };
+    });
+    document.getElementById('kc-reset').onclick = () => {
+      KEY_DEFS.forEach(d => keyCfg[d.id] = d.default);
+      GP_DEFS.forEach(d => gpCfg[d.id] = d.default);
+      _saveCfg('vectors_keys', keyCfg);
+      _saveCfg('vectors_gp',   gpCfg);
+      _rebinding = null; renderKC();
+    };
+    document.getElementById('kc-back').onclick = () => {
+      _rebinding = null; fgClear(); callback();
+    };
+    setupFocusKC();
+  }
+
+  function setupFocusKC() {
+    const kEls = KEY_DEFS.map(d => document.getElementById(`kc-k-${d.id}`));
+    const gEls = GP_DEFS.map(d => document.getElementById(`kc-g-${d.id}`));
+    fgSetup([
+      ...kEls.map(el => [el]),
+      ...gEls.map(el => [el]),
+      [document.getElementById('kc-reset'), document.getElementById('kc-back')],
+    ]);
+  }
+
+  _kcRerender = renderKC;
+  renderKC();
+}
+
+// ============================================================
+// Gamepad support
+// ============================================================
+const GP_REPEAT_FIRST = 220; // ms before auto-repeat starts
+const GP_REPEAT_RATE  = 90;  // ms between repeats
+let gpPrev = {};             // previous pressed state per button index
+let gpRepeat = {};           // {btn: nextFireTime}
+let gpSoftDrop = false;
+
+function pollGamepad(now) {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp = [...gamepads].find(g => g);
+  if (!gp) { gpPrev = {}; gpRepeat = {}; gpSoftDrop = false; return; }
+
+  const pressed = idx => gp.buttons[idx]?.pressed ?? false;
+  const axisL  = gp.axes[0] ?? 0;
+  const axisLY = gp.axes[1] ?? 0;
+
+  // D-pad + left stick
+  const dLeft  = pressed(14) || axisL  < -0.5;
+  const dRight = pressed(15) || axisL  >  0.5;
+  const dDown  = pressed(13) || axisLY >  0.5;
+  const dUp    = pressed(12) || axisLY < -0.5;
+
+  // Configurable face buttons
+  const btnConfirm = pressed(gpCfg.confirm ?? 0);  // A
+  const btnCancel  = pressed(gpCfg.cancel  ?? 2);  // X
+  const btnPause   = pressed(gpCfg.pause   ?? 9);  // Start
+
+  const gpVals = { dLeft, dRight, dUp, dDown, btnConfirm, btnCancel, btnPause };
+  function edge(key) {
+    const cur = gpVals[key] ?? false;
+    const was = gpPrev[key] ?? false;
+    gpPrev[key] = cur;
+    return cur && !was;
+  }
+  function held(key, action) {
+    const cur = gpVals[key] ?? false;
+    if (!cur) { delete gpRepeat[key]; gpPrev[key] = false; return; }
+    if (!gpPrev[key]) { gpPrev[key] = true; gpRepeat[key] = now + GP_REPEAT_FIRST; action(); return; }
+    if (now >= (gpRepeat[key] ?? Infinity)) { gpRepeat[key] = now + GP_REPEAT_RATE; action(); }
+  }
+
+  // --- Rebinding mode: capture next button press ---
+  if (screenState === 'keyconfig' && _rebinding?.type === 'gp') {
+    for (let i = 0; i < gp.buttons.length; i++) {
+      if (gp.buttons[i]?.pressed && !gpPrev[`b${i}`]) {
+        gpCfg[_rebinding.id] = i;
+        _saveCfg('vectors_gp', gpCfg);
+        _rebinding = null; _kcRerender?.();
+        gpPrev = {}; return;
+      }
+    }
+    for (let i = 0; i < gp.buttons.length; i++) gpPrev[`b${i}`] = gp.buttons[i]?.pressed ?? false;
+    return;
+  }
+
+  // --- Game ---
+  if (screenState === 'game' && !gameOver) {
+    const busy = clearParticles.length > 0 || fallParticles.length > 0 || pendingSpawn || !piece;
+    if (!busy && !paused && !cleared) {
+      held('dLeft',  () => { if (canPlace(pieceRow, pieceCol-1, piece)) { pieceCol--; sfx('move'); } });
+      held('dRight', () => { if (canPlace(pieceRow, pieceCol+1, piece)) { pieceCol++; sfx('move'); } });
+      if (dDown  && !gpSoftDrop) { softDrop = true;  gpSoftDrop = true; }
+      if (!dDown &&  gpSoftDrop) { softDrop = false; gpSoftDrop = false; }
+      if (edge('btnConfirm') || edge('dUp')) rotatePiece();
+      if (edge('btnCancel'))               transformPiece();
+    }
+    if (edge('btnPause')) togglePause();
+    if (cleared && performance.now() >= clearSkipAt && edge('btnConfirm')) {
+      bgmEndCallback = null; nextStage();
+    }
+    return;
+  }
+
+  // --- Menus: d-pad = focus navigation, confirm = click, cancel = back ---
+  if (screenState === 'scenario') {
+    if (edge('btnConfirm') || edge('btnPause')) document.getElementById('overlay')?.click();
+    return;
+  }
+  if (edge('dUp'))    fgMove(-1, 0);
+  if (edge('dDown'))  fgMove(1, 0);
+  if (edge('dLeft'))  fgMove(0, -1);
+  if (edge('dRight')) fgMove(0, 1);
+  if (edge('btnConfirm') || edge('btnPause')) fgClick();
+  if (edge('btnCancel')) {
+    if (screenState === 'howto')     document.getElementById('howto-back-btn')?.click();
+    else if (screenState === 'hiscore')  document.getElementById('hs-continue-btn')?.click();
+    else if (screenState === 'overlay')  document.getElementById('ov-title')?.click();
+    else if (screenState === 'keyconfig')   document.getElementById('kc-back')?.click();
+    else if (screenState === 'musicselect') document.getElementById('ms-back')?.click();
+  }
+}
+// Helper: navigate focus grid + confirm (shared by menu screens)
+function _menuFocusKey(e) {
+  const k = e.key;
+  if (k === 'ArrowUp'    || isKey(e, 'up'))    { fgMove(-1, 0); e.preventDefault(); return true; }
+  if (k === 'ArrowDown'  || isKey(e, 'down'))  { fgMove(1, 0);  e.preventDefault(); return true; }
+  if (k === 'ArrowLeft'  || isKey(e, 'left'))  { fgMove(0, -1); e.preventDefault(); return true; }
+  if (k === 'ArrowRight' || isKey(e, 'right')) { fgMove(0, 1);  e.preventDefault(); return true; }
+  if (k === 'Enter' || isKey(e, 'confirm'))    { fgClick();     e.preventDefault(); return true; }
+  return false;
+}
+
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  // Prevent arrow keys / space from scrolling the page in all states
+  if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight' || k === ' ') {
+    e.preventDefault();
+  }
+
+  // --- Key config screen ---
+  if (screenState === 'keyconfig') {
+    if (_rebinding?.type === 'key') {
+      if (k === 'Escape') { _rebinding = null; _kcRerender?.(); e.preventDefault(); return; }
+      keyCfg[_rebinding.id] = k;
+      _saveCfg('vectors_keys', keyCfg);
+      _rebinding = null; _kcRerender?.();
+      e.preventDefault(); return;
+    }
+    if (_menuFocusKey(e)) return;
+    if (k === 'Escape' || isKey(e, 'cancel')) { document.getElementById('kc-back')?.click(); e.preventDefault(); }
+    return;
+  }
+
+  // --- Title ---
+  if (screenState === 'title') {
+    if (_menuFocusKey(e)) return;
+    // cancel has no meaning at top level
+    return;
+  }
+
+  // --- Scenario text ---
+  if (screenState === 'scenario') {
+    if (k === 'Enter' || k === ' ' || k === 'Escape' || isKey(e, 'confirm') || isKey(e, 'cancel')) {
+      document.getElementById('overlay')?.click(); e.preventDefault();
+    }
+    return;
+  }
+
+  // --- How To Play ---
+  if (screenState === 'howto') {
+    if (_menuFocusKey(e)) return;
+    if (k === 'Escape' || isKey(e, 'cancel')) {
+      document.getElementById('howto-back-btn')?.click(); e.preventDefault();
+    }
+    return;
+  }
+
+  // --- Music Select ---
+  if (screenState === 'musicselect') {
+    if (_menuFocusKey(e)) return;
+    if (k === 'Escape' || isKey(e, 'cancel')) {
+      document.getElementById('ms-back')?.click(); e.preventDefault();
+    }
+    return;
+  }
+
+  // --- Hi Score ---
+  if (screenState === 'hiscore') {
+    if (_menuFocusKey(e)) return;
+    if (k === 'Escape' || isKey(e, 'cancel')) {
+      document.getElementById('hs-continue-btn')?.click(); e.preventDefault();
+    }
+    return;
+  }
+
+  // --- Game over / clear overlay ---
+  if (screenState === 'overlay') {
+    if (_menuFocusKey(e)) return;
+    if (k === 'Escape' || isKey(e, 'cancel')) {
+      document.getElementById('ov-title')?.click(); e.preventDefault();
+    }
+    return;
+  }
+
+  // --- Gameplay ---
+  const busy = clearParticles.length > 0 || pendingSpawn || !piece;
+  if (gameOver || busy) return;
+  if (k === 'Escape') { showTitle(); return; }
+  if (waitingForMusic) return;
+  if (k === 'd' || k === 'D') { debugMode = !debugMode; return; }
+  if (k === 'q' || k === 'Q') {
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (grid[r][c] >= 6 && grid[r][c] <= 9) grid[r][c] = EMPTY;
+    doSettleStep();
+    score = 0; updateUI();
+    return;
+  }
+  if (k === 'p' || k === 'P' || isKey(e, 'pause')) { togglePause(); return; }
+  if (cleared) {
+    if (performance.now() >= clearSkipAt && (k === 'Enter' || isKey(e, 'confirm'))) {
+      bgmEndCallback = null;
+      nextStage();
+    }
+    return;
+  }
+  if (paused) return;
+
+  if (k === 'ArrowLeft'  || isKey(e, 'left'))    { if (canPlace(pieceRow, pieceCol-1, piece)) { pieceCol--; sfx('move'); } e.preventDefault(); return; }
+  if (k === 'ArrowRight' || isKey(e, 'right'))   { if (canPlace(pieceRow, pieceCol+1, piece)) { pieceCol++; sfx('move'); } e.preventDefault(); return; }
+  if (k === 'ArrowDown'  || isKey(e, 'down') || isKey(e, 'drop') || k === ' ') { softDrop = true; e.preventDefault(); return; }
+  if (k === 'ArrowUp'    || isKey(e, 'up') || isKey(e, 'confirm')) { rotatePiece(); e.preventDefault(); return; }
+  if (isKey(e, 'cancel'))                         { transformPiece(); e.preventDefault(); return; }
+});
+
+document.addEventListener('keyup', e => {
+  if (e.key === 'ArrowDown' || e.key === ' ' || isKey(e, 'down') || isKey(e, 'drop')) softDrop = false;
+});
+
+function rotatePiece() {
+  // Rotate each cell's direction by 90° clockwise
+  piece = piece.map(v => {
+    if (!isVector(v)) return v;
+    const base = v <= 5 ? 2 : 6;
+    const d = (cellDir(v) + 1) % 4; // clockwise
+    return base + d;
+  });
+  sfx('rotate');
+}
+
+function transformPiece() {
+  // Cosmos rotation: rotate arrangement of the 3 cells (shift down)
+  piece = [piece[2], piece[0], piece[1]];
+  sfx('transform');
+}
+
+// ============================================================
+// Game loop
+// ============================================================
+function update(ts) {
+  const now = performance.now();
+  const dt  = Math.min(ts - lastTime, 200);
+  lastTime = ts;
+
+  pollGamepad(now);
+
+  if (!gameOver && !paused && !cleared) {
+    const animating = clearParticles.length > 0 || iceParticles.length > 0 || fallParticles.length > 0;
+
+    if (animating) {
+      // Remove each cell from grid exactly when its fade animation begins
+      for (const p of clearParticles) {
+        if (!p.removed && now >= p.waveStart) {
+          grid[p.r][p.c] = EMPTY;
+          p.removed = true;
+        }
+      }
+      // Commit completed fall particles to grid (or trigger ice shatter)
+      for (const p of fallParticles) {
+        if (!p.done && now >= p.startMs + p.dur) {
+          if (p.isIce) {
+            iceParticles.push({ r: p.toR, c: p.c, start: now, dur: 480 });
+            sfx('ice');
+          } else {
+            grid[p.toR][p.c] = p.value;
+          }
+          p.done = true;
+        }
+      }
+      // Purge finished particles
+      clearParticles = clearParticles.filter(p => now < p.waveStart + p.fadeDur);
+      iceParticles   = iceParticles.filter(p => now < p.start + p.dur);
+      fallParticles  = fallParticles.filter(p => !p.done);
+      // When all animations done, continue settle or spawn
+      if (clearParticles.length === 0 && iceParticles.length === 0 && fallParticles.length === 0) {
+        if (pendingSettle) {
+          pendingSettle = false;
+          doSettleStep();
+        } else if (pendingSpawn) {
+          pendingSpawn = false;
+          spawnNextPiece();
+        }
+      }
+    } else if (pendingSettle && !waitingForMusic) {
+      pendingSettle = false;
+      doSettleStep();
+    } else if (pendingSpawn && !waitingForMusic) {
+      // No particles but still pending (no loops cleared)
+      pendingSpawn = false;
+      spawnNextPiece();
+    } else if (piece && !waitingForMusic) {
+      // Normal drop
+      dropTimer += dt;
+      const interval = softDrop ? 80 : dropInterval;
+      if (dropTimer >= interval) {
+        dropTimer = 0;
+        if (canPlace(pieceRow + 1, pieceCol, piece)) {
+          pieceRow++;
+        } else {
+          lockPiece();
+        }
+      }
+    }
+    // Always expire time-based overlays regardless of animation state
+    scorePopups = scorePopups.filter(p => now < p.startMs + p.dur);
+    if (chainDisplay && now >= chainDisplay.startMs + chainDisplay.dur) chainDisplay = null;
+  }
+  draw(now);
+  requestAnimationFrame(update);
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+const COLORS = {
+  vec1: ['#ee3355','#cc2244','#ff4466','#dd3355'],  // Pink/red arrows (original style)
+  vec2: ['#ffcc00','#ffaa00','#ffdd22','#ff9900'],  // Gold arrows
+  wall: '#cc9900',
+  gray: '#556677',
+  ice:  '#99ddff',
+  bg:   '#1e0c02',   // Dark warm brown (original field color)
+  grid: '#2c1604',   // Warm dark brown grid lines
+};
+
+function drawArrow(ctx, x, y, size, dir, col) {
+  const cx = x + size/2, cy = y + size/2;
+  const s = size * 0.44;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate([Math.PI, Math.PI/2, 0, -Math.PI/2][dir]);
+  const sw = s * 0.33, hl = s * 0.12, tip = s;
+  // Dark shadow (offset 1px down-right)
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.moveTo(-s+1,-sw+1); ctx.lineTo(hl+1,-sw+1); ctx.lineTo(hl+1,-s*0.70+1);
+  ctx.lineTo(tip+1,1);    ctx.lineTo(hl+1,s*0.70+1); ctx.lineTo(hl+1,sw+1);
+  ctx.lineTo(-s+1,sw+1);  ctx.closePath(); ctx.fill();
+  // Arrow body (flat color)
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(-s,-sw); ctx.lineTo(hl,-sw); ctx.lineTo(hl,-s*0.70);
+  ctx.lineTo(tip,0);  ctx.lineTo(hl,s*0.70); ctx.lineTo(hl,sw);
+  ctx.lineTo(-s,sw);  ctx.closePath(); ctx.fill();
+  // Single bright highlight pixel line on top-left edges
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-s,-sw); ctx.lineTo(hl,-sw); ctx.lineTo(hl,-s*0.70); ctx.lineTo(tip,0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCell(ctx, x, y, size, v, alpha) {
+  if (v === EMPTY) return;
+  const ba = alpha ?? 1;
+  ctx.globalAlpha = ba;
+
+  // ---- WALL: stepped pyramid from above, TL=white bevel, BR=black bevel ----
+  if (v === WALL) {
+    ctx.fillStyle = '#0e0400'; ctx.fillRect(x, y, size, size); // mortar
+    const steps = [
+      [1,  '#8a6010'],   // base tier (darkest)
+      [5,  '#b08020'],   // 2nd tier
+      [9,  '#d4a830'],   // 3rd tier
+      [13, '#f4cc3c'],   // peak (brightest)
+    ];
+    // Pass 1: fill all faces outside→inside
+    for (const [ins, col] of steps) {
+      ctx.fillStyle = col;
+      ctx.fillRect(x+ins, y+ins, size-ins*2, size-ins*2);
+    }
+    // Pass 2: TL bright + BR dark bevel on each step's outer edge
+    // Outer step gets purest white; inner steps slightly warmer
+    const hiCols = ['#ffffff', '#fff8c0', '#ffe880', '#fff0a0'];
+    for (let i = 0; i < steps.length; i++) {
+      const ins = steps[i][0], w = size-ins*2, h = size-ins*2;
+      ctx.fillStyle = hiCols[i];
+      ctx.fillRect(x+ins,     y+ins,     w,  1);   // top
+      ctx.fillRect(x+ins,     y+ins+1,   1, h-1);  // left
+      ctx.fillStyle = '#040100';
+      ctx.fillRect(x+ins,     y+ins+h-1, w,  1);   // bottom
+      ctx.fillRect(x+ins+w-1, y+ins,     1,  h);   // right
+    }
+    ctx.globalAlpha = 1; return;
+  }
+
+  // ---- GRAY_WALL: heavy stone slab ----
+  if (v === GRAY_WALL) {
+    ctx.fillStyle = '#060606'; ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#404855'; ctx.fillRect(x+1, y+1, size-2, size-2);
+    ctx.fillStyle = '#6a7888';
+    ctx.fillRect(x+1, y+1, size-2, 3); ctx.fillRect(x+1, y+4, 3, size-5);
+    ctx.fillStyle = '#141820';
+    ctx.fillRect(x+1, y+size-4, size-2, 3); ctx.fillRect(x+size-4, y+1, 3, size-5);
+    ctx.globalAlpha = 1; return;
+  }
+
+  // ---- ICE_WALL → Glass pane: brick background shows through ----
+  // (brick already drawn by drawBackground — just overlay glass)
+  if (v === ICE_WALL) {
+    ctx.globalAlpha = ba * 0.18;
+    ctx.fillStyle = '#88ccff'; ctx.fillRect(x+1, y+1, size-2, size-2);
+    ctx.globalAlpha = ba;
+    ctx.strokeStyle = 'rgba(180,235,255,0.50)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x+1.5, y+1.5, size-3, size-3);
+    // L-shape specular highlight (glass reflection)
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.fillRect(x+2, y+2, size-5, 2);
+    ctx.fillRect(x+2, y+4, 2, size-7);
+    ctx.globalAlpha = ba * 0.22;
+    ctx.fillStyle = '#ccecff';
+    ctx.fillRect(x+5, y+5, size-9, 1); // secondary glint
+    // Animated reflection sweep — diagonal band across the pane
+    {
+      const phase = ((drawNow / 4400) + (x + y) * 0.004) % 1;
+      if (phase < 0.22) {
+        const t = phase / 0.22;
+        const shimA = Math.sin(t * Math.PI) * 0.72 * ba;
+        const bx = x - 4 + (size + 12) * t;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x+1, y+1, size-2, size-2); ctx.clip();
+        const sg = ctx.createLinearGradient(bx - 7, y, bx + 7, y + size);
+        sg.addColorStop(0,   'rgba(255,255,255,0)');
+        sg.addColorStop(0.5, `rgba(255,255,255,${shimA.toFixed(3)})`);
+        sg.addColorStop(1,   'rgba(255,255,255,0)');
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = sg;
+        ctx.fillRect(x+1, y+1, size-2, size-2);
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = 1; return;
+  }
+
+  // ---- Vec2: Gold ingot with arrow ----
+  const color = cellColor(v);
+  const dir   = cellDir(v);
+
+  if (color === 2) {
+    ctx.fillStyle = '#0a0300'; ctx.fillRect(x, y, size, size);    // gap
+    // Outer casting rim — dark gold (the mould edge)
+    ctx.fillStyle = '#5a3200'; ctx.fillRect(x+1, y+1, size-2, size-2);
+    // Rim highlight: top + left bright (lit edge of ingot)
+    ctx.fillStyle = '#ffe040';
+    ctx.fillRect(x+1, y+1, size-2, 4);
+    ctx.fillRect(x+1, y+5, 4, size-6);
+    // Rim shadow: bottom + right dark
+    ctx.fillStyle = '#1c0a00';
+    ctx.fillRect(x+1, y+size-5, size-2, 4);
+    ctx.fillRect(x+size-5, y+1, 4, size-6);
+    // TL corner bright, BR corner dark
+    ctx.fillStyle = '#fff888'; ctx.fillRect(x+1, y+1, 4, 4);
+    ctx.fillStyle = '#0e0400'; ctx.fillRect(x+size-5, y+size-5, 4, 4);
+    // Polished ingot face
+    ctx.fillStyle = '#c89010'; ctx.fillRect(x+5, y+5, size-10, size-10);
+    // Face inner highlight (top + left strip = polished glare)
+    ctx.fillStyle = '#f0c030';
+    ctx.fillRect(x+5, y+5, size-10, 2);
+    ctx.fillRect(x+5, y+7, 2, size-12);
+    // Face inner shadow (bottom + right strip)
+    ctx.fillStyle = '#7a5800';
+    ctx.fillRect(x+5, y+size-7, size-10, 2);
+    ctx.fillRect(x+size-7, y+5, 2, size-10);
+    // Arrow on polished face (very bright gold, small shadow)
+    drawArrow(ctx, x+5, y+5, size-10, dir, '#fff0a0');
+    // Animated shimmer sweep across polished face
+    {
+      const phase = ((drawNow / 4400) + (x + y) * 0.004) % 1;
+      if (phase < 0.25) {
+        const t = phase / 0.25;
+        const shimA = Math.sin(t * Math.PI) * 0.55;
+        const bx = x + 5 - 6 + (size - 10 + 12) * t;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x+5, y+5, size-10, size-10); ctx.clip();
+        const sg = ctx.createLinearGradient(bx - 8, y+5, bx + 8, y+size-5);
+        sg.addColorStop(0,   'rgba(255,255,200,0)');
+        sg.addColorStop(0.5, `rgba(255,255,220,${shimA.toFixed(3)})`);
+        sg.addColorStop(1,   'rgba(255,255,200,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(x+5, y+5, size-10, size-10);
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = 1; return;
+  }
+
+  // ---- Vec1: Stone tile with pink arrow ----
+  ctx.fillStyle = '#080400'; ctx.fillRect(x, y, size, size);     // mortar
+  ctx.fillStyle = '#525252'; ctx.fillRect(x+1, y+1, size-2, size-2);
+  ctx.fillStyle = '#8a8a8a'; // highlight
+  ctx.fillRect(x+1, y+1, size-2, 3); ctx.fillRect(x+1, y+4, 3, size-5);
+  ctx.fillStyle = '#1c1c1c'; // shadow
+  ctx.fillRect(x+1, y+size-4, size-2, 3); ctx.fillRect(x+size-4, y+1, 3, size-5);
+  ctx.fillStyle = '#999'; ctx.fillRect(x+1, y+1, 3, 3); // TL corner bright
+  ctx.fillStyle = '#111'; ctx.fillRect(x+size-4, y+size-4, 3, 3); // BR corner dark
+  drawArrow(ctx, x+1, y+1, size-2, dir, COLORS.vec1[dir]);
+  ctx.globalAlpha = 1;
+}
+
+// Draw brick background pattern (running bond, ancient stone)
+function drawBrickPattern(cx, w, h) {
+  const BW = 40, BH = 16, MT = 2;
+  cx.fillStyle = '#100600';
+  cx.fillRect(0, 0, w, h);
+  const BRICK_COLS = ['#241008', '#221006', '#271108', '#201006'];
+  let row = 0;
+  for (let by = 0; by < h; by += BH + MT, row++) {
+    const off = (row % 2) ? Math.round((BW + MT) / 2) : 0;
+    for (let bx = -off; bx < w; bx += BW + MT) {
+      const tone = (row * 5 + Math.round((bx + off) / (BW + MT)) * 3) & 3;
+      cx.fillStyle = BRICK_COLS[tone];
+      cx.fillRect(bx, by, BW, BH);
+      cx.fillStyle = '#2e1810'; cx.fillRect(bx, by, BW, 1);
+      cx.fillStyle = '#180c06'; cx.fillRect(bx, by+BH-1, BW, 1);
+    }
+  }
+}
+
+function drawBackground() {
+  drawBrickPattern(ctx, CW, CH);
+}
+
+function draw(now) {
+  drawNow = now;
+  drawBackground();
+
+  // While paused: hide the field completely, show only PAUSED text
+  if (paused) {
+    ctx.fillStyle = 'rgba(5,5,16,0.92)';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = "bold 24px 'BIZ UDGothic', 'DotGothic16', monospace";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PAUSED', CW/2, CH/2);
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
+
+  // Border WALL blocks (bottom + left + right; top open for piece entry)
+  for (let c = 0; c < COLS + 2; c++) {
+    drawCell(ctx, c*CELL,           OY + ROWS*CELL, CELL, WALL); // bottom row
+  }
+  for (let r = HIDDEN; r < ROWS; r++) {  // rows 0..HIDDEN-1 are hidden above canvas
+    drawCell(ctx, 0,                OY + r*CELL,    CELL, WALL); // left col
+    drawCell(ctx, (COLS+1)*CELL,    OY + r*CELL,    CELL, WALL); // right col
+  }
+
+  // All playfield rendering in local coordinates (translate to field origin)
+  ctx.save();
+  ctx.translate(OX, OY);
+
+  // Very faint grid lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.lineWidth = 0.4;
+  for (let r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(W,r*CELL); ctx.stroke();
+  }
+  for (let c = 0; c <= COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,H); ctx.stroke();
+  }
+
+  // Grid cells
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      drawCell(ctx, c*CELL, r*CELL, CELL, grid[r][c]);
+    }
+  }
+
+  // ---- Debug overlay ----
+  if (debugMode) {
+    const dbgStatus = getDebugCellStatus();
+
+    // --- Layer 1: cell classification markers ---
+    // Helper: draw diagonal hatching lines clipped to a cell
+    function drawHatch(x, y, sz, col, alpha, step) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, sz, sz); ctx.clip();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.globalAlpha = alpha;
+      for (let d = -sz; d < sz * 2; d += step) {
+        ctx.beginPath();
+        ctx.moveTo(x + d,      y);
+        ctx.lineTo(x + d + sz, y + sz);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // Helper: draw X mark on a cell
+    function drawX(x, y, sz, col, alpha) {
+      const p = 4;
+      ctx.save();
+      ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(x+p, y+p); ctx.lineTo(x+sz-p, y+sz-p);
+      ctx.moveTo(x+sz-p, y+p); ctx.lineTo(x+p, y+sz-p);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const x = c * CELL, y = r * CELL;
+        const st = dbgStatus[r][c];
+        if (st === 'hard-wall') {
+          // WALL / GRAY_WALL — red X, clearly marks it as a dead end
+          drawX(x, y, CELL, '#ff3333', 0.85);
+        } else if (st === 'eff-wall') {
+          // ICE on solid base — orange hatch + label
+          drawHatch(x, y, CELL, '#ff6600', 0.65, 7);
+          drawX(x, y, CELL, '#ff6600', 0.75);
+        } else if (st === 'ice-mobile') {
+          // ICE that will fall — blue arrows (just a subtle border)
+          ctx.save();
+          ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+          ctx.strokeRect(x+2, y+2, CELL-4, CELL-4);
+          ctx.restore();
+        } else if (st === 'tight-gap') {
+          // < 3 cells enclosed — orange fill + hatch + X
+          ctx.save();
+          ctx.fillStyle = 'rgba(255,140,0,0.3)'; ctx.fillRect(x, y, CELL, CELL);
+          ctx.restore();
+          drawHatch(x, y, CELL, '#ff8800', 0.5, 6);
+          drawX(x, y, CELL, '#ff8800', 0.9);
+        }
+        // Label
+        let label = null, labelCol = '#fff';
+        if (st === 'hard-wall')  { label = '壁';   labelCol = '#ff8888'; }
+        if (st === 'eff-wall')   { label = '実壁'; labelCol = '#ffbb88'; }
+        if (st === 'ice-mobile') { label = '落下'; labelCol = '#88ddff'; }
+        if (st === 'tight-gap')  { label = '狭小'; labelCol = '#ffdd88'; }
+        if (label) {
+          ctx.save();
+          ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.globalAlpha = 0.95;
+          ctx.fillStyle = '#000';
+          ctx.fillText(label, x + CELL/2 + 1, y + CELL - 2);
+          ctx.fillStyle = labelCol;
+          ctx.fillText(label, x + CELL/2,     y + CELL - 3);
+          ctx.restore();
+        }
+
+        // Vec1 (gray) blocks pointing toward a dead end → X mark
+        if (cellColor(grid[r][c]) === 1 && analyzeVec2Chain(r, c).stuck) {
+          drawX(x, y, CELL, '#ff3333', 0.8);
+        }
+      }
+    }
+
+    // --- Layer 2: gold block chain analysis ---
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (cellColor(grid[r][c]) !== 2) continue;
+        const info = analyzeVec2Chain(r, c);
+        const chainCol = info.stuck ? '#ff5500' : '#00ee88';
+
+        // Border on root cell
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+        ctx.strokeStyle = chainCol;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+        ctx.restore();
+
+        // Chain line
+        if (info.path.length >= 2) {
+          ctx.save();
+          ctx.globalAlpha = 0.65;
+          ctx.strokeStyle = chainCol;
+          ctx.lineWidth = 2.5;
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(info.path[0][1] * CELL + CELL/2, info.path[0][0] * CELL + CELL/2);
+          for (let i = 1; i < info.path.length; i++)
+            ctx.lineTo(info.path[i][1] * CELL + CELL/2, info.path[i][0] * CELL + CELL/2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Arrow from last path cell toward terminal
+        const last = info.path[info.path.length - 1];
+        const lv = grid[last[0]][last[1]];
+        if (isVector(lv)) {
+          const [dr, dc] = DIR_OFFSET[cellDir(lv)];
+          const fx = last[1] * CELL + CELL/2, fy = last[0] * CELL + CELL/2;
+          const tx = fx + dc * CELL * 0.85,   ty = fy + dr * CELL * 0.85;
+          const ang = Math.atan2(ty - fy, tx - fx);
+          ctx.save();
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = chainCol; ctx.fillStyle = chainCol; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(tx - 9*Math.cos(ang-0.5), ty - 9*Math.sin(ang-0.5));
+          ctx.lineTo(tx - 9*Math.cos(ang+0.5), ty - 9*Math.sin(ang+0.5));
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+
+        // Terminal cell: show what stopped the chain
+        const { termR, termC, reason, stuck } = info;
+        const TERM_COLORS = {
+          obstacle:'#ff3333', 'side-wall':'#ff3333', 'non-vector':'#ff3333',
+          'no-target':'#ff3333', maxiter:'#ff3333',
+          empty:'#44ff88', 'top-open':'#44aaff', loop:'#ffdd00',
+        };
+        const TERM_LABELS = {
+          obstacle:'壁', 'side-wall':'壁外', 'non-vector':'壁',
+          'no-target':'壁', maxiter:'壁',
+          empty:'空き', 'top-open':'上open', loop:'ループ',
+        };
+        if (termR >= 0 && termR < ROWS && termC >= 0 && termC < COLS) {
+          ctx.save();
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = TERM_COLORS[reason] ?? '#888';
+          ctx.fillRect(termC*CELL+4, termR*CELL+4, CELL-8, CELL-8);
+          ctx.restore();
+        }
+        // Reason label on root cell (top)
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = info.stuck ? '#ffbbbb' : '#bbffcc';
+        ctx.fillText(TERM_LABELS[reason] ?? reason, c*CELL + CELL/2, r*CELL + 10);
+        ctx.restore();
+      }
+    }
+
+    // "DEBUG" badge
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(2, 2, 52, 16);
+    ctx.fillStyle = '#ff4444';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('DEBUG', 5, 14);
+    ctx.restore();
+  }
+  // ---- End debug overlay ----
+
+  // Fall animation particles
+  if (fallParticles.length > 0) {
+    for (const p of fallParticles) {
+      if (p.done) continue;
+      const elapsed = Math.min(now - p.startMs, p.dur);
+      // ease-out cubic
+      const t = elapsed / p.dur;
+      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      const yFrom = p.fromR * CELL;
+      const yTo   = p.toR   * CELL;
+      const y = yFrom + (yTo - yFrom) * ease;
+      const x = p.c * CELL;
+      ctx.save();
+      ctx.globalAlpha = p.isIce ? 0.88 : 1.0;
+      drawCell(ctx, x, y, CELL, p.value);
+      // Motion blur trail (faint copies behind the block)
+      if (p.toR - p.fromR > 1 && t < 0.85) {
+        ctx.globalAlpha = 0.18;
+        drawCell(ctx, x, y - (yTo - yFrom) * 0.08, CELL, p.value);
+      }
+      ctx.restore();
+    }
+  }
+
+  // Loop clear wave particles
+  if (clearParticles.length > 0) {
+    for (const p of clearParticles) {
+      const elapsed = now - p.waveStart;
+      if (elapsed < 0) continue; // not yet reached in wave
+      const prog = Math.min(elapsed / p.fadeDur, 1);
+      const alpha = 1 - prog;
+      const scale = 1 - prog * 0.7;
+      const cx = p.c * CELL + CELL / 2;
+      const cy = p.r * CELL + CELL / 2;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-CELL / 2, -CELL / 2);
+      drawCell(ctx, 0, 0, CELL, p.value);
+      ctx.restore();
+      // Sparkle burst ring
+      const ringR = (CELL / 2) * (0.5 + prog * 0.8);
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.strokeStyle = cellColor(p.value) === 2 ? '#ffcc00' : '#ee3355';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Ice shatter particles
+  if (iceParticles.length > 0) {
+    for (const p of iceParticles) {
+      const elapsed = now - p.start;
+      if (elapsed < 0) continue;
+      const prog = Math.min(elapsed / p.dur, 1);
+      const alpha = 1 - prog;
+      const cx = p.c * CELL + CELL / 2;
+      const cy = p.r * CELL + CELL / 2;
+      const fragSize = CELL * 0.22 * (1 - prog * 0.4);
+      // 8 shards flying outward
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const dist = prog * CELL * 1.0;
+        const fx = cx + Math.cos(angle) * dist;
+        const fy = cy + Math.sin(angle) * dist;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(fx, fy);
+        ctx.rotate(angle + prog * Math.PI);
+        const grad = ctx.createLinearGradient(-fragSize, -fragSize, fragSize, fragSize);
+        grad.addColorStop(0, '#ccf4ff');
+        grad.addColorStop(1, '#4499cc');
+        ctx.fillStyle = grad;
+        ctx.fillRect(-fragSize / 2, -fragSize / 2, fragSize, fragSize);
+        ctx.restore();
+      }
+      // Central flash burst at start
+      if (prog < 0.3) {
+        ctx.save();
+        ctx.globalAlpha = (0.3 - prog) / 0.3 * 0.8;
+        ctx.fillStyle = '#ddf8ff';
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL * 0.45 * (prog / 0.3), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  // Game-over stuck cell flash
+  if (goAnim) {
+    const elapsed = now - goAnim.start;
+    const flashOn = Math.floor(elapsed / 180) % 2 === 0;
+    if (flashOn) {
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      ctx.fillStyle = '#ff2222';
+      for (const [r, c] of goAnim.cells) {
+        ctx.fillRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+      }
+      ctx.restore();
+    }
+  }
+
+  // Falling piece
+  if (piece && !gameOver && !cleared) {
+    for (let i = 0; i < 3; i++) {
+      const r = pieceRow + i;
+      if (r >= 0 && r < ROWS) {
+        drawCell(ctx, pieceCol*CELL, r*CELL, CELL, piece[i], 0.9);
+        // Bright border for falling piece
+        ctx.strokeStyle = '#ffffff44';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pieceCol*CELL+1, r*CELL+1, CELL-2, CELL-2);
+      }
+    }
+    // Ghost piece — hide when piece overlaps landing position
+    let ghostRow = pieceRow;
+    while (canPlace(ghostRow + 1, pieceCol, piece)) ghostRow++;
+    if (ghostRow > pieceRow + 2) {  // only show when no overlap with piece
+      for (let i = 0; i < 3; i++) {
+        const r = ghostRow + i;
+        if (r >= 0 && r < ROWS) {
+          drawCell(ctx, pieceCol*CELL, r*CELL, CELL, piece[i], 0.2);
+        }
+      }
+    }
+  }
+
+  // Score popups
+  if (scorePopups.length > 0) {
+    for (const p of scorePopups) {
+      const elapsed = now - p.startMs;
+      if (elapsed < 0) continue;
+      const t = Math.min(elapsed / p.dur, 1);
+      // Float up then slow; fade out in last 40%
+      const rise = Math.sqrt(t) * CELL * 3.5;
+      const alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+      // Scale: pop in quickly then settle
+      const scale = t < 0.12 ? t / 0.12 : 1;
+      // Color by chain: 1=gold, 2=orange, 3=red, 4+=hot-pink
+      const colors = ['#ffd700','#ff9900','#ff4422','#ff22cc'];
+      const col = colors[Math.min(p.chain - 1, colors.length - 1)];
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(p.cx, p.cy - rise);
+      ctx.scale(scale, scale);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Shadow
+      ctx.font = `bold 22px 'Courier New', monospace`;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillText(`+${p.points}`, 2, 2);
+      ctx.fillStyle = col;
+      ctx.fillText(`+${p.points}`, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // Chain display
+  if (chainDisplay) {
+    const elapsed = now - chainDisplay.startMs;
+    if (elapsed >= 0) {
+      const t = Math.min(elapsed / chainDisplay.dur, 1);
+      // Phases: 0-10% scale-in, 10-70% hold, 70-100% fade-out
+      let alpha, scale;
+      if (t < 0.10) { scale = t / 0.10; alpha = 1; }
+      else if (t < 0.70) { scale = 1; alpha = 1; }
+      else { scale = 1; alpha = 1 - (t - 0.70) / 0.30; }
+
+      const chainColors = ['#ff9900','#ff4422','#ff22cc','#aa00ff'];
+      const col = chainColors[Math.min(chainDisplay.count - 2, chainColors.length - 1)];
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(W / 2, H / 2 - CELL * 1.5);
+      ctx.scale(scale, scale);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = `${chainDisplay.count} CHAIN!`;
+      const sz = 32 + Math.min(chainDisplay.count - 2, 4) * 4;
+      ctx.font = `bold ${sz}px 'BIZ UDGothic', 'DotGothic16', monospace`;
+      // Glow
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillText(label, 2, 2);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 12;
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // Clear flash effect
+  if (cleared) {
+    ctx.fillStyle = 'rgba(255,220,0,0.15)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = "bold 28px 'BIZ UDGothic', 'DotGothic16', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('STAGE CLEAR!', W/2, H/2);
+    if (now >= clearSkipAt) {
+      ctx.font = "11px 'BIZ UDGothic', monospace";
+      ctx.fillStyle = 'rgba(255,215,0,0.7)';
+      const blink = Math.floor(now / 500) % 2 === 0;
+      if (blink) ctx.fillText('TAP / ENTER  ▶  NEXT STAGE', W/2, H/2 + 32);
+    }
+  }
+
+  ctx.restore(); // end playfield translate
+
+}
+
+function drawNext() {
+  const nc = nextCanvas;
+  const nx = nextCtx;
+  nx.fillStyle = '#050510';
+  nx.fillRect(0, 0, nc.width, nc.height);
+  if (!nextPiece) return;
+  const sz = CELL;  // 36px — same as game blocks
+  const ox = (nc.width - sz) / 2;
+  for (let i = 0; i < 3; i++) {
+    drawCell(nx, ox, 4 + i * (sz + 4), sz, nextPiece[i]);
+  }
+}
+
+function updateUI() {
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('stage-val').textContent = stage;
+  drawNext();
+}
+
+// ============================================================
+// Overlay / Title
+// ============================================================
+function showOverlay(title, msg, btnText) {
+  screenState = 'overlay';
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = '';
+  ov.style.overflowY = '';
+  ov.innerHTML = `
+    <h2>${title}</h2>
+    <p>${msg}</p>
+    <button id="ov-btn">${btnText}</button>
+    <button id="ov-title" style="margin-top:8px;background:#111;font-size:11px;padding:6px 16px;color:#888;border:1px solid #444">TITLE</button>
+  `;
+  ov.style.display = 'flex';
+  const ovBtn   = document.getElementById('ov-btn');
+  const ovTitle = document.getElementById('ov-title');
+  ovBtn.onclick   = () => initGame(stageIdx, practiceMode);
+  ovTitle.onclick = showTitle;
+  fgSetup([[ovBtn], [ovTitle]]);
+}
+
+// ============================================================
+// Scenario text display (opening / ending)
+// ============================================================
+const OPENING_TEXT = `　　　　　　　　　　　　　　　Ｖｅｃｔｏｒｓ
+
+．．．．．．
+　俺の名はセレンゲティ、トレジャーハンターだ。エジプトを中心に仕事をしている。無論、セレンゲティとはビジネスネームだ。
+　いつも世話になっている情報屋のカラバッシュから、カエムワセトの墓らしい物が見つかったと聞いて早速やって来た訳だ。カエムワセト、こいつはエジプト最大の王ラムセスⅡ世の息子にしてその宰相だった男だ。これと言った功績がなにも無かったツタンクアメン（ツタンカーメンなんて発音する変な国もあるが。）なんぞとは比較にならん莫大な財宝が眠っている筈だ、筈だが・・・・。
+　だぁーーーー、何なんだ一体、壁と言い、床と言い、この一面矢印で覆われたトラップまみれの通路は。さすがの俺様ももう後がねぇ、あと一発しくじりゃおだぶつだ。やっと見つけた安全とおぼしき床の上で荒い息をしていると、突然、頭の中に直接響く様に声が聞こえてきた。
+　「久しぶりの客だの、主も我が財宝が目当てか？　ククク、目当ての物が欲しくば我が試練を乗り越えることじゃ、さすれば、何物にも替えがたい宝をやろう、試練を乗り越えることが出来ればの話じゃがの、クククク・・・・・。」
+　声は潮が引くかの様に消えた。俺の頭の中を、中指をたてたミイラがかすめた。`;
+
+const ENDING_TEXT = `．．．．．．
+　やっとの事でトラップゾーンを抜け出した俺を向かえてくれたのは、石で出来た扉だった。まさか、資格の無い者には開ける事が出来ないなんて言うんじゃないだろうな。その時またあの声が聞こえてきた。
+　「よく分かったの、その通りじゃ。この扉は純粋なエジプト人で、王の血をひいている者にしか開けることが出来ぬ。無理に開けようとすれば命の保証はできぬぞえ、折角手に入れた宝をみすみす無くすこともなかろう。ククク、ほれ、帰り道はそこの隅にある。ではさらばじゃ。」
+　そして声は一方的に消えた。純粋なエジプト人で王の血を引いた者だぁ、不可能そのものじゃねえか。（王の血は別として、長年の混血により今では純粋なエジプト人なんていない。）おまけに宝が自分の命だったとは、こうゆうのを骨折り損のくたびれ儲け、て言うんだろな。
+　またまた俺の頭の中を、中指を立てたミイラがかすめた。`;
+
+const PRACTICE_ENDING_TEXT = `　お疲れ様でした。練習モードは、これで終わりです。Ｖｅｃｔｏｒｓのルールはこれで理解できましたか？
+
+．．．．．．
+　よかった。理解できたのですね。
+　それでは、いよいよ普通のモードに挑戦してみましょう。あなたなら、必ずこの試練を越えることができるでしょう。
+　あなたが無事に外の世界へ帰ることができるよう祈っています。
+　頑張って下さい。`;
+
+function showScenarioText({ text, music, onDone }) {
+  if (music) playMusic(music);
+
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = 'flex-start';
+  ov.style.overflowY = 'hidden';
+  ov.style.cursor = 'pointer';
+
+  const lines = text.split('\n').map(l =>
+    `<p style="margin:0 0 1.1em;white-space:pre-wrap;">${l.replace(/</g,'&lt;') || '\u3000'}</p>`
+  ).join('');
+
+  ov.innerHTML = `
+    <div id="sn-inner" style="
+      position:absolute; left:0; right:0;
+      padding:0 28px;
+      font-size:14px; color:#c8b870; line-height:1.9;
+      pointer-events:none;">
+      ${lines}
+    </div>
+    <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;
+      font-size:10px;color:rgba(200,184,112,0.4);letter-spacing:3px;pointer-events:none;">
+      クリックでスキップ
+    </div>
+  `;
+  ov.style.display = 'flex';
+  screenState = 'scenario';
+
+  const inner = document.getElementById('sn-inner');
+  const containerH = ov.clientHeight;
+  let y = Math.floor(containerH * 0.8);
+  const SPEED = 9; // px/sec (約1/3)
+  let lastTs = null;
+  let rafId = null;
+  let finished = false;
+  let scrollDone = false;
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    cancelAnimationFrame(rafId);
+    ov.style.cursor = '';
+    ov.removeEventListener('click', finish);
+    onDone();
+  }
+
+  function step(ts) {
+    if (finished) return;
+    if (lastTs === null) lastTs = ts;
+    y -= SPEED * (ts - lastTs) / 1000;
+    lastTs = ts;
+    // 全文が見えたら（テキスト下端がコンテナ下端に到達したら）停止
+    const stopY = containerH - inner.offsetHeight;
+    if (y <= stopY) {
+      y = stopY;
+      inner.style.transform = `translateY(${y}px)`;
+      if (!scrollDone) {
+        scrollDone = true;
+        // ヒントを「クリックで進む」に更新
+        const hint = ov.querySelector('div[style*="bottom:10px"]');
+        if (hint) hint.style.color = 'rgba(200,184,112,0.7)';
+      }
+      rafId = requestAnimationFrame(step); // クリック待ちのためループ継続
+      return;
+    }
+    inner.style.transform = `translateY(${y}px)`;
+    rafId = requestAnimationFrame(step);
+  }
+
+  // setTimeout で現在のクリックイベントのバブルアップが終わってから登録
+  setTimeout(() => {
+    ov.addEventListener('click', finish);
+    rafId = requestAnimationFrame(step);
+  }, 0);
+}
+
+function showHowToPlay(callback) {
+  const SZ = 36;
+  const blocks = [
+    { v: 4,         label: '灰色ブロック',              sub: '3個一組の落下ピースとして降ってくる' },
+    { v: 8,         label: '金色ブロック',              sub: 'ループで消すターゲット' },
+    { v: WALL,      label: '固定壁',                   sub: 'ピラミッド型・動かない' },
+    { v: GRAY_WALL, label: '灰壁',                     sub: '空きスペースへ落下する' },
+    { v: ICE_WALL,  label: 'ガラス壁',                  sub: '落下すると砕けて消える' },
+  ];
+  const blockHtml = blocks.map((b, i) =>
+    `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+       <canvas id="blk-${i}" width="${SZ}" height="${SZ}"
+         style="flex-shrink:0;image-rendering:pixelated;border:1px solid #332200;"></canvas>
+       <div>
+         <div style="color:#ffd700;font-size:13px;">${b.label}</div>
+         <div style="color:#7799bb;font-size:11px;">${b.sub}</div>
+       </div>
+     </div>`
+  ).join('');
+
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = '';
+  ov.style.overflowY = 'auto';
+  ov.innerHTML = `
+    <h2 style="margin-bottom:4px;">HOW TO PLAY</h2>
+    <p style="color:#ffd700;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.7;">
+      矢印でループを作り<br>金色ブロックを全て消すとステージクリア
+    </p>
+    <div style="text-align:left;max-width:280px;width:100%;">
+      <div style="color:#88bbff;font-size:11px;letter-spacing:1px;margin-bottom:8px;">ブロック</div>
+      ${blockHtml}
+      <div style="color:#88bbff;font-size:11px;letter-spacing:1px;margin:12px 0 8px;">操作方法</div>
+      <div style="font-size:12px;color:#aaccff;line-height:1.9;">
+        ← → &nbsp;&nbsp;: 移動 &nbsp;&nbsp;
+        Z / ↑ : 回転<br>
+        X &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: 配置変換 &nbsp;
+        ↓ / Space : 落下<br>
+        P &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: 一時停止 &nbsp;
+        ESC : タイトル
+      </div>
+    </div>
+    <button id="howto-back-btn" style="margin-top:20px;padding:10px 28px;
+      background:#223366;color:#ffd700;border:1px solid #ffd700;
+      font-family:inherit;font-size:14px;cursor:pointer;letter-spacing:2px;">BACK</button>
+  `;
+  ov.style.display = 'flex';
+  screenState = 'howto';
+  const backBtn = document.getElementById('howto-back-btn');
+  backBtn.onclick = callback;
+  fgSetup([[backBtn]]);
+
+  // Draw block samples on each mini-canvas
+  blocks.forEach((b, i) => {
+    const c = document.getElementById(`blk-${i}`);
+    if (!c) return;
+    const cx = c.getContext('2d');
+    drawBrickPattern(cx, SZ, SZ);
+    drawCell(cx, 0, 0, SZ, b.v);
+  });
+
+  playMusic('opening');
+}
+
+// ============================================================
+// Music Select Screen
+// ============================================================
+function showMusicSelect(callback) {
+  screenState = 'musicselect';
+  const trackList = Object.entries(TRACKS); // [[key, {src,loop,title}], ...]
+  let focusRow = 0;
+  let autoPlay = false;
+
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = '';
+  ov.style.overflowY = 'auto';
+
+  // Returns a callback that advances from fromIdx to the next track.
+  // Using a factory avoids relying on bgmKey (which is cleared before the callback fires).
+  function makePlayNext(fromIdx) {
+    return function() {
+      if (!autoPlay || screenState !== 'musicselect') return;
+      const nextIdx = (fromIdx + 1) % trackList.length;
+      focusRow = nextIdx;
+      playMusic(trackList[nextIdx][0], null, true); // forceOnce so loop tracks end
+      bgmEndCallback = makePlayNext(nextIdx);
+      render();
+    };
+  }
+
+  function startTrack(idx) {
+    focusRow = idx;
+    const key = trackList[idx][0];
+    if (bgmKey === key) {
+      stopMusic();
+      bgmEndCallback = null;
+    } else {
+      playMusic(key, null, autoPlay); // forceOnce when autoPlay is on
+      if (autoPlay) bgmEndCallback = makePlayNext(idx);
+    }
+    render();
+  }
+
+  function render() {
+    const rows = trackList.map(([key, t], i) => {
+      const playing = bgmKey === key;
+      const num = String(i + 1).padStart(2, '0');
+      return `<div class="ms-row" id="ms-row-${i}" data-key="${key}" style="
+        display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;user-select:none;
+        ${playing ? 'background:rgba(255,215,0,0.09);' : ''}">
+        <span style="color:${playing ? '#ffd700' : '#334455'};font-size:13px;width:14px;flex-shrink:0;">${playing ? '▶' : ''}</span>
+        <span style="font-family:'Courier New',monospace;font-size:11px;color:#556677;flex-shrink:0;width:22px;">${num}</span>
+        <span style="flex:1;font-size:12px;color:${playing ? '#ffd700' : '#aaccff'};text-align:left;">${t.title}</span>
+        <span style="font-size:9px;color:#445566;letter-spacing:1px;flex-shrink:0;">${t.loop ? 'LOOP' : 'ONCE'}</span>
+      </div>`;
+    }).join('');
+
+    const apActive = autoPlay;
+    ov.innerHTML = `
+      <div style="text-align:center;padding:14px 16px 18px;width:100%;max-width:320px;">
+        <div style="font-size:9px;letter-spacing:4px;color:#6688aa;margin-bottom:4px;">SOUND ROOM</div>
+        <div style="font-size:20px;letter-spacing:4px;color:#ffd700;margin-bottom:12px;">MUSIC SELECT</div>
+        <div style="border:1px solid rgba(255,215,0,0.2);margin-bottom:12px;">${rows}</div>
+        <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
+          <button id="ms-autoplay" style="padding:6px 14px;font-size:11px;letter-spacing:1px;margin-top:0;
+            background:${apActive ? '#1a3a1a' : '#162244'};
+            border:1px solid ${apActive ? '#44cc44' : '#446'};
+            color:${apActive ? '#44ee44' : '#aaccff'};
+            font-family:inherit;cursor:pointer;">
+            AUTO PLAY ${apActive ? 'ON' : 'OFF'}
+          </button>
+          <button id="ms-back" style="padding:6px 20px;font-size:11px;letter-spacing:2px;margin-top:0;
+            background:#223366;color:#ffd700;border:1px solid #ffd700;
+            font-family:inherit;cursor:pointer;">BACK</button>
+        </div>
+      </div>`;
+    ov.style.display = 'flex';
+
+    trackList.forEach(([key], i) => {
+      const el = document.getElementById(`ms-row-${i}`);
+      if (!el) return;
+      el.onmouseenter = () => { if (!el.classList.contains('kf')) el.style.background = 'rgba(255,215,0,0.05)'; };
+      el.onmouseleave = () => { if (!el.classList.contains('kf')) el.style.background = bgmKey === key ? 'rgba(255,215,0,0.09)' : ''; };
+      el.onclick = () => startTrack(i);
+    });
+
+    document.getElementById('ms-autoplay').onclick = () => {
+      autoPlay = !autoPlay;
+      if (autoPlay) {
+        // If a track is currently playing, restart it as forceOnce so it ends and advances
+        const curKey = bgmKey;
+        const curIdx = trackList.findIndex(([k]) => k === curKey);
+        if (curKey && bgmAudio && !bgmAudio.ended && curIdx >= 0) {
+          playMusic(curKey, null, true);
+          bgmEndCallback = makePlayNext(curIdx);
+          focusRow = curIdx;
+        }
+      } else {
+        bgmEndCallback = null;
+        // Restore looping for a loop track that was playing in forceOnce mode
+        const curKey = bgmKey;
+        if (curKey && TRACKS[curKey]?.loop && bgmAudio) {
+          bgmAudio.loop = true; // restore looping
+        }
+      }
+      render();
+      // Keep focus on the autoplay button row
+      focusRow = trackList.length;
+      setupFocusMS();
+    };
+
+    document.getElementById('ms-back').onclick = () => {
+      bgmEndCallback = null;
+      stopMusic();
+      callback();
+    };
+
+    setupFocusMS();
+  }
+
+  function setupFocusMS() {
+    const rowEls = trackList.map((_, i) => document.getElementById(`ms-row-${i}`));
+    const apBtn  = document.getElementById('ms-autoplay');
+    const backBtn = document.getElementById('ms-back');
+    fgSetup([...rowEls.map(el => [el]), [apBtn, backBtn]], focusRow, 0);
+  }
+
+  render();
+}
+
+function showTitle() {
+  const mainCount = MAIN_STAGES.length;
+  const pracCount = PRACTICE_STAGES.length;
+  let mainIdx = 0, pracIdx = 0;
+
+  const subBtn = (id, label, extra = '') =>
+    `<button id="${id}" style="padding:5px 14px;font-size:11px;letter-spacing:1px;margin-top:0;
+      background:#162244;border:1px solid #446;color:#aaccff;
+      font-family:inherit;cursor:pointer;${extra}">${label}</button>`;
+  const navBtn = (id, label) =>
+    `<button id="${id}" style="width:26px;height:26px;padding:0;font-size:12px;margin-top:0;
+      background:#162244;border:1px solid #446;color:#aaccff;cursor:pointer;">${label}</button>`;
+  const goBtn = (id, label = '▶ START') =>
+    `<button id="${id}" style="padding:5px 14px;font-size:11px;letter-spacing:1px;margin-top:0;
+      background:#1a2a44;border:1px solid #ffd700;color:#ffd700;
+      font-family:inherit;cursor:pointer;">${label}</button>`;
+
+  const ov = document.getElementById('overlay');
+  ov.style.justifyContent = 'flex-start';
+  ov.style.overflowY = 'hidden';
+  ov.innerHTML = `
+    <img src="images/Title.png"
+      style="width:100%;display:block;image-rendering:pixelated;flex-shrink:0;">
+    <div style="width:100%;padding:8px 8px 12px;text-align:center;">
+
+      <!-- Row 0: START GAME -->
+      <div style="margin-bottom:10px;">
+        <button id="start-btn">START GAME</button>
+      </div>
+
+      <!-- Row 1-2: stage selectors (table for reliable column + vertical alignment) -->
+      <table style="margin:0 auto 10px;border-collapse:separate;border-spacing:6px 6px;">
+        <tr>
+          <td style="font-size:9px;color:#88aacc;text-align:right;letter-spacing:1px;vertical-align:middle;white-space:nowrap;">MAIN</td>
+          <td style="vertical-align:middle;">${navBtn('main-prev','◄')}</td>
+          <td id="main-num" style="font-size:14px;font-family:'Courier New',monospace;color:#ffd700;text-align:center;vertical-align:middle;width:26px;">1</td>
+          <td style="vertical-align:middle;">${navBtn('main-next','►')}</td>
+          <td style="vertical-align:middle;">${goBtn('main-go')}</td>
+        </tr>
+        <tr>
+          <td style="font-size:9px;color:#6688aa;text-align:right;letter-spacing:1px;vertical-align:middle;white-space:nowrap;">PRACTICE</td>
+          <td style="vertical-align:middle;">${navBtn('prac-prev','◄')}</td>
+          <td id="prac-num" style="font-size:14px;font-family:'Courier New',monospace;color:#aaccff;text-align:center;vertical-align:middle;width:26px;">1</td>
+          <td style="vertical-align:middle;">${navBtn('prac-next','►')}</td>
+          <td style="vertical-align:middle;">${goBtn('prac-go')}</td>
+        </tr>
+      </table>
+
+      <!-- Row 3: gameplay sub-menu -->
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:6px;">
+        ${subBtn('howto-btn', 'HOW TO PLAY')}
+        ${subBtn('ranking-btn', 'RANKING')}
+      </div>
+      <!-- Row 4: settings sub-menu -->
+      <div style="display:flex;gap:6px;justify-content:center;">
+        ${subBtn('keyconfig-btn', 'KEY CONFIG')}
+        ${subBtn('soundroom-btn', 'SOUND ROOM')}
+      </div>
+    </div>
+  `;
+  ov.style.display = 'flex';
+  screenState = 'title';
+
+  function startGame() {
+    showScenarioText({ text: OPENING_TEXT, music: 'opening', onDone: () => initGame(0, false) });
+  }
+  function mainPrev() { mainIdx = (mainIdx - 1 + mainCount) % mainCount; document.getElementById('main-num').textContent = mainIdx + 1; }
+  function mainNext() { mainIdx = (mainIdx + 1) % mainCount; document.getElementById('main-num').textContent = mainIdx + 1; }
+  function mainGo()   { initGame(mainIdx, false); }
+  function pracPrev() { pracIdx = (pracIdx - 1 + pracCount) % pracCount; document.getElementById('prac-num').textContent = pracIdx + 1; }
+  function pracNext() { pracIdx = (pracIdx + 1) % pracCount; document.getElementById('prac-num').textContent = pracIdx + 1; }
+  function pracGo()   { initGame(pracIdx, true); }
+  function howto()    { showHowToPlay(showTitle); }
+  function ranking()  { showHiScoreScreen(0, showTitle); }
+  function keyconfig(){ showKeyConfig(showTitle); }
+  function soundroom(){ showMusicSelect(showTitle); }
+
+  titleActions = { startGame, howto, ranking, keyconfig, soundroom, mainPrev, mainNext, mainGo, pracPrev, pracNext, pracGo };
+
+  // Wire buttons
+  document.getElementById('start-btn').onclick     = startGame;
+  document.getElementById('howto-btn').onclick      = howto;
+  document.getElementById('ranking-btn').onclick    = ranking;
+  document.getElementById('keyconfig-btn').onclick  = keyconfig;
+  document.getElementById('soundroom-btn').onclick  = soundroom;
+  document.getElementById('main-prev').onclick      = mainPrev;
+  document.getElementById('main-next').onclick      = mainNext;
+  document.getElementById('main-go').onclick        = mainGo;
+  document.getElementById('prac-prev').onclick      = pracPrev;
+  document.getElementById('prac-next').onclick      = pracNext;
+  document.getElementById('prac-go').onclick        = pracGo;
+
+  // Hover styles for sub buttons
+  ['howto-btn','ranking-btn','keyconfig-btn','soundroom-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    el.onmouseenter = () => { if (!el.classList.contains('kf')) el.style.background = '#1f3055'; };
+    el.onmouseleave = () => { if (!el.classList.contains('kf')) el.style.background = '#162244'; };
+  });
+
+  // 2D focus grid:
+  //   row 0: [start-btn]
+  //   row 1: [main-prev, main-next, main-go]
+  //   row 2: [prac-prev, prac-next, prac-go]
+  //   row 3: [howto-btn, ranking-btn]
+  //   row 4: [keyconfig-btn, soundroom-btn]
+  fgSetup([
+    [document.getElementById('start-btn')],
+    [document.getElementById('main-prev'), document.getElementById('main-next'), document.getElementById('main-go')],
+    [document.getElementById('prac-prev'), document.getElementById('prac-next'), document.getElementById('prac-go')],
+    [document.getElementById('howto-btn'), document.getElementById('ranking-btn')],
+    [document.getElementById('keyconfig-btn'), document.getElementById('soundroom-btn')],
+  ], 0, 0);  // default: START GAME
+
+  gameOver = true;
+  playMusic('title');
+}
+
+// Start render loop — show title with stage selector
+initKeyCfg();
+gameOver = true;
+paused = false;
+grid = Array.from({length:ROWS}, () => new Array(COLS).fill(0));
+piece = null;
+nextPiece = null;
+score = 0; stage = 0;
+requestAnimationFrame(ts => { lastTime = ts; update(ts); });
+showTitle();
+
+// --- Viewport scaling ---
+// Fits the entire app into the available browser window (both up and down).
+// CSS zoom affects layout flow (unlike transform:scale), so no overflow occurs.
+function scaleMobile() {
+  const APP_W = CW + 16 + 106; // 518
+  const app = document.getElementById('app');
+  app.style.zoom = ''; // reset first so offsetHeight reflects natural size
+  const APP_H = app.offsetHeight || CH;
+  const PAD = 16; // breathing room (px, each side combined)
+  const scale = Math.min(
+    (window.innerWidth  - PAD) / APP_W,
+    (window.innerHeight - PAD) / APP_H
+  );
+  if (Math.abs(scale - 1) >= 0.02) app.style.zoom = scale;
+}
+scaleMobile();
+window.addEventListener('resize', scaleMobile);
+// Prevent page scroll / bounce on touch devices
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// --- Stage clear skip / pause resume: tap / click on canvas ---
+function canvasTap() {
+  if (screenState !== 'game') return;
+  if (cleared && performance.now() >= clearSkipAt) {
+    bgmEndCallback = null; nextStage();
+  }
+}
+canvas.addEventListener('click', canvasTap);
+canvas.addEventListener('touchstart', e => {
+  if (screenState !== 'game') return;
+  if (!paused && cleared && performance.now() >= clearSkipAt) {
+    e.preventDefault();
+    canvasTap();
+  }
+}, { passive: false });
+
+// --- Virtual Gamepad ---
+(function setupVpad() {
+  const MENU_STATES = ['title','keyconfig','howto','musicselect','hiscore','overlay'];
+
+  function vpAction(act) {
+    // Menu navigation
+    if (MENU_STATES.includes(screenState)) {
+      if (act === 'up')    { fgMove(-1, 0); return; }
+      if (act === 'down')  { fgMove(1, 0);  return; }
+      if (act === 'left')  { fgMove(0, -1); return; }
+      if (act === 'right') { fgMove(0, 1);  return; }
+      if (act === 'rot')   { fgClick(); return; }
+      if (act === 'trn' || act === 'pause') {
+        if (screenState === 'howto')        document.getElementById('howto-back-btn')?.click();
+        else if (screenState === 'hiscore') document.getElementById('hs-continue-btn')?.click();
+        else if (screenState === 'overlay') document.getElementById('ov-title')?.click();
+        else if (screenState === 'keyconfig') document.getElementById('kc-back')?.click();
+        else if (screenState === 'musicselect') document.getElementById('ms-back')?.click();
+        return;
+      }
+    }
+    // Scenario / story text
+    if (screenState === 'scenario') {
+      if (act === 'rot' || act === 'trn') document.getElementById('overlay')?.click();
+      return;
+    }
+    if (screenState !== 'game' || gameOver) return;
+
+    // Pause toggle (always available in game)
+    if (act === 'pause') { togglePause(); return; }
+    if (paused) return;
+
+    // Stage clear: confirm to advance
+    if (cleared) {
+      if (act === 'rot' && performance.now() >= clearSkipAt) {
+        bgmEndCallback = null; nextStage();
+      }
+      return;
+    }
+    const busy = clearParticles.length > 0 || pendingSpawn || !piece;
+    if (busy || paused || waitingForMusic) return;
+
+    if (act === 'left')  { if (canPlace(pieceRow, pieceCol-1, piece)) { pieceCol--; sfx('move'); } }
+    if (act === 'right') { if (canPlace(pieceRow, pieceCol+1, piece)) { pieceCol++; sfx('move'); } }
+    if (act === 'rot')   { rotatePiece(); }
+    if (act === 'trn')   { transformPiece(); }
+    // 'down' is handled via softDrop flag directly in event listeners
+  }
+
+  // Auto-repeat for left/right (250ms delay, 80ms interval — like keyboard repeat)
+  let _vrTimer = null;
+  function vrStart(act) {
+    vpAction(act);
+    _vrTimer = setTimeout(() => {
+      _vrTimer = setInterval(() => vpAction(act), 80);
+    }, 250);
+  }
+  function vrStop() {
+    clearTimeout(_vrTimer);
+    clearInterval(_vrTimer);
+    _vrTimer = null;
+  }
+
+  document.querySelectorAll('[data-vact]').forEach(btn => {
+    const act = btn.dataset.vact;
+
+    if (act === 'down') {
+      // Hold = softDrop in game; tap = cursor down in menus
+      const press = e => {
+        e.preventDefault();
+        if (screenState === 'game' && !gameOver) softDrop = true;
+        else vpAction('down');
+      };
+      const release = e => { e.preventDefault(); softDrop = false; };
+      btn.addEventListener('touchstart',  press,   { passive: false });
+      btn.addEventListener('touchend',    release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+      btn.addEventListener('mousedown',   press);
+      btn.addEventListener('mouseup',     release);
+      btn.addEventListener('mouseleave',  release);
+    } else if (act === 'left' || act === 'right') {
+      // Directional with auto-repeat
+      const press = e => { if (e.cancelable) e.preventDefault(); vrStart(act); };
+      const release = e => { if (e.cancelable) e.preventDefault(); vrStop(); };
+      btn.addEventListener('touchstart',  press,   { passive: false });
+      btn.addEventListener('touchend',    release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+      btn.addEventListener('mousedown',   press);
+      btn.addEventListener('mouseup',     release);
+      btn.addEventListener('mouseleave',  release);
+    } else {
+      // Single-fire buttons (up, rot, trn, pause)
+      btn.addEventListener('touchstart', e => { e.preventDefault(); vpAction(act); }, { passive: false });
+      btn.addEventListener('click', () => vpAction(act));
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VECTORS 攻略ガイド</title>
+<style>
+  :root {
+    --bg:       #110800;
+    --bg2:      #1c0e04;
+    --bg3:      #261408;
+    --border:   #3a2010;
+    --gold:     #ffd700;
+    --gold2:    #ffcc44;
+    --blue:     #88aaff;
+    --cyan:     #88ccdd;
+    --green:    #88cc88;
+    --red:      #ff4466;
+    --muted:    #667788;
+    --text:     #ccbbaa;
+    --white:    #eeeeee;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ===== レイアウト ===== */
+  .page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* ===== ヘッダ ===== */
+  .site-header {
+    text-align: center;
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .site-header h1 {
+    font-size: 2.2rem;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-shadow: 0 0 18px #ff880066;
+  }
+  .site-header .sub {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  /* ===== セクション ===== */
+  section {
+    margin-bottom: 52px;
+  }
+  section h2 {
+    font-size: 1.25rem;
+    color: var(--gold);
+    border-left: 4px solid var(--gold);
+    padding: 4px 0 4px 12px;
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+  }
+  section h3 {
+    font-size: 1.05rem;
+    color: var(--blue);
+    margin: 24px 0 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+
+  /* ===== 画像横並び ===== */
+  .img-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin: 20px 0;
+  }
+  .img-row .img-block {
+    flex: 1;
+    margin: 0;
+  }
+  .img-row .img-block img {
+    max-width: 100%;
+  }
+
+  /* ===== 画像 ===== */
+  .img-block {
+    text-align: center;
+    margin: 20px 0;
+  }
+  .img-block img {
+    max-width: 70%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .img-block figcaption {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  /* ===== テーブル ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.93rem;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--cyan);
+    font-weight: bold;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  td {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--bg2); }
+
+  /* ===== キーバッジ ===== */
+  kbd {
+    display: inline-block;
+    background: #2a1a08;
+    border: 1px solid #6a4020;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: monospace;
+    font-size: 0.88em;
+    color: var(--gold2);
+    white-space: nowrap;
+  }
+
+  /* ===== ヒントボックス ===== */
+  .tip {
+    background: #0a1820;
+    border-left: 3px solid var(--blue);
+    border-radius: 0 4px 4px 0;
+    padding: 10px 16px;
+    margin: 16px 0;
+    font-size: 0.93rem;
+  }
+  .tip .label {
+    color: var(--blue);
+    font-weight: bold;
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+/* ===== ピース分類カード ===== */
+  .piece-note {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 12px 0;
+  }
+  .piece-note .pn-title {
+    color: var(--gold);
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  .piece-note .pn-body {
+    font-size: 0.92rem;
+    color: var(--text);
+  }
+  .piece-note .pn-count {
+    float: right;
+    color: var(--cyan);
+    font-size: 0.85rem;
+  }
+
+  /* ===== ステップリスト ===== */
+  ol.steps {
+    padding-left: 1.4em;
+  }
+  ol.steps li {
+    margin-bottom: 10px;
+  }
+  ol.steps li strong {
+    color: var(--gold2);
+  }
+
+  /* ===== 参考（数学） ===== */
+  #appendix summary { outline: none; }
+  #appendix summary::-webkit-details-marker { display: none; }
+  #appendix details[open] > summary { color: var(--cyan); }
+  #appendix details[open] > summary::before { content: "▼ "; }
+  #appendix details:not([open]) > summary::before { content: "▶ "; }
+
+  .math {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.92em;
+    color: var(--cyan);
+  }
+  .math-block {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.93rem;
+    background: var(--bg3);
+    border-left: 3px solid var(--muted);
+    padding: 10px 16px;
+    margin: 12px 0;
+    line-height: 1.9;
+    color: var(--cyan);
+  }
+
+  /* ===== ステージ攻略カード ===== */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .stage-card {
+    display: block;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .stage-card:hover {
+    border-color: var(--gold);
+    background: var(--bg3);
+  }
+  .stage-card .sc-num {
+    font-size: 0.82rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .stage-card .sc-title {
+    font-size: 1rem;
+    color: var(--gold);
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .stage-card .sc-desc {
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  /* ===== フッタ ===== */
+  footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+  <h1>VECTORS 攻略ガイド</h1>
+  <div class="sub">PC-9801用パズルゲーム「Vectors」（Dark Veil, 1993）ブラウザ移植版</div>
+  <nav style="margin-top:14px;font-size:0.88rem;">
+    <a href="#goal"   style="color:var(--blue);margin:0 10px;text-decoration:none;">ゲームの目標</a>
+    <a href="#blocks" style="color:var(--blue);margin:0 10px;text-decoration:none;">ブロック</a>
+    <a href="#piece"  style="color:var(--blue);margin:0 10px;text-decoration:none;">落下ピース</a>
+    <a href="#loop"   style="color:var(--blue);margin:0 10px;text-decoration:none;">ループ</a>
+    <a href="#stages" style="color:var(--gold);margin:0 10px;text-decoration:none;font-weight:bold;">▶ ステージ攻略</a>
+  </nav>
+</header>
+
+<!-- ============================================================ -->
+<section id="goal">
+  <h2>ゲームの目標</h2>
+  <p>
+    3個一組の灰色ブロックを落下させ、<strong style="color:var(--gold)">金色ブロックをループで消す</strong>とステージクリアです。<br>
+    ループとは、同色の矢印が向き合って循環する経路のことです。フィールドから金色ブロックを全て排除することがゴールです。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="blocks">
+  <h2>ブロックの種類</h2>
+
+  <figure class="img-block">
+    <img src="images/guide/block_types.png" alt="ブロック種類">
+  </figure>
+
+  <p>
+    <strong style="color:var(--text)">灰色ブロック</strong>はこのゲームの主役です。
+    ステージには最初から灰色ブロックが固定配置されており、ループ経路の一部を担っています。
+    同時に、プレイヤーが操作する<strong>落下ピース</strong>も灰色ブロック3個一組で構成されています。
+    各セルには矢印の向き（↑↓←→）が設定されており、落下済みの灰色ブロックと繋いでループを作るのが基本戦略です。
+  </p>
+  <p style="margin-top:10px;">
+    <strong style="color:var(--gold)">金色ブロック</strong>はループで消すターゲットです。金色ブロック自身にも矢印の向きがあり、ループ経路の一部として機能します。ただし、金色ブロックだけではループを形成できません。
+  </p>
+  <p style="margin-top:10px;">
+    <strong>固定壁・灰壁・ガラス壁</strong>はループで消えない障害物です。灰壁は空きスペースへ落下し、ガラス壁は着地と同時に砕けて消えます。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="piece">
+  <h2>落下ピースの操作</h2>
+
+  <p>
+    落下ピースは灰色ブロック3個一組（上・中・下 = a・b・c）で構成されます。
+    操作は<strong style="color:var(--gold2)">回転</strong>と<strong style="color:var(--gold2)">変換</strong>の2種類で、接地するのは常に<strong>下セル（c）</strong>です。
+    変換でどのセルを下に持ってくるかを決め、回転で向きを整えてから落とすのが基本の手順です。
+  </p>
+
+  <figure class="img-block">
+    <img src="images/guide/operations.png" alt="回転と変換の説明">
+    <figcaption>上段：回転（矢印の向きが変わる、セル位置は不変）／ 下段：変換（セルの位置が循環する、矢印は不変）</figcaption>
+  </figure>
+
+  <h3>ピースの等価クラス（6種）</h3>
+  <p>
+    矢印の向きは4通り、3セルなので 4³ = 64 通りのピースがあります。
+    回転（4サイクル）×変換（3サイクル）の組み合わせで移り合えるピース同士は実質同一なので、
+    <strong style="color:var(--gold)">6クラス</strong>に分類できます（合計 4+12+12+12+12+12 = 64 通り）。
+  </p>
+
+  <figure class="img-block">
+    <img src="images/guide/piece_types.png" alt="落下ピース等価クラス">
+    <figcaption>G1〜G6 の各クラス。a=上セル・b=中セル・c=下セル</figcaption>
+  </figure>
+
+  <div class="piece-note">
+    <div class="pn-title">G1：全同向き <span class="pn-count">×4通り</span></div>
+    <div class="pn-body">
+      3セル全て同じ向き（↑↑↑・←←←・↓↓↓・→→→）。変換しても見た目が変わらない。
+      回転だけで向きを決められるため最も扱いやすい。
+    </div>
+  </div>
+  <div class="piece-note">
+    <div class="pn-title">G2：a=b、c が +90° <span class="pn-count">×12通り</span></div>
+    <div class="pn-body">上2セルが同向きで、下セルだけ90°時計回りにずれている。例：↑↑←</div>
+  </div>
+  <div class="piece-note">
+    <div class="pn-title">G3：a=b、c が +180°（反対向き） <span class="pn-count">×12通り</span></div>
+    <div class="pn-body">上2セルが同向きで、下セルだけ反対を向いている。例：↑↑↓。変換で下セルを上に出すと ↓↑↑ になり、接地する向きを逆転できる。</div>
+  </div>
+  <div class="piece-note">
+    <div class="pn-title">G4：a=b、c が −90° <span class="pn-count">×12通り</span></div>
+    <div class="pn-body">上2セルが同向きで、下セルだけ90°反時計回りにずれている。例：↑↑→</div>
+  </div>
+  <div class="piece-note">
+    <div class="pn-title">G5：各セルが +90° ずつ（CW連続） <span class="pn-count">×12通り</span></div>
+    <div class="pn-body">a→b→c の順に90°ずつ時計回りにずれる。例：↑←↓。3セル全て異なる向きを持つ。</div>
+  </div>
+  <div class="piece-note">
+    <div class="pn-title">G6：各セルが −90° ずつ（CCW連続） <span class="pn-count">×12通り</span></div>
+    <div class="pn-body">a→b→c の順に90°ずつ反時計回りにずれる。例：↑→↓。3セル全て異なる向きを持つ。</div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="loop">
+  <h2>ループの仕組み</h2>
+
+  <div class="img-row">
+    <figure class="img-block">
+      <img src="images/guide/loop_basic.png" alt="最小ループ">
+      <figcaption>
+        向き合う2つの矢印が互いを指し合うと最小ループが成立。
+        2個以上が連鎖する経路でも成立し、経路上の全ブロックが消去される。
+      </figcaption>
+    </figure>
+    <figure class="img-block">
+      <img src="images/guide/loop_explanation.png" alt="ループ消去の仕組み">
+      <figcaption>
+        右辺の灰色ピースを落とすとループが完成し、経路上の金色ブロックも一緒に消去される。
+        金色ブロック自身の矢印もループ経路の一部として機能する。
+      </figcaption>
+    </figure>
+  </div>
+
+</section>
+
+<!-- ============================================================ -->
+<section id="appendix">
+  <details>
+    <summary style="cursor:pointer; color:var(--muted); font-size:0.95rem; padding:6px 0; list-style:none;">
+      ▶ 参考：なぜ等価クラスはちょうど6種になるのか（群論による説明）
+    </summary>
+
+    <div style="margin-top:20px;">
+
+    <h2>参考：等価クラスが6種になる理由</h2>
+
+    <p>
+      ピースの全パターン数は 4³ = 64 通り。回転と変換で移り合えるものを「同一視」したとき、
+      クラス数がちょうど <strong style="color:var(--gold)">6</strong> になることを Burnside の補題で示します。
+    </p>
+
+    <h3>1. 作用する群の構造</h3>
+    <p>
+      2つの操作を定義します（方向は 0=← 1=↓ 2=→ 3=↑ で mod 4 の整数として扱います）。
+    </p>
+    <table>
+      <tr><th>操作</th><th>ピース [a, b, c] への作用</th><th>位数</th></tr>
+      <tr>
+        <td><strong>R（回転）</strong></td>
+        <td><span class="math">[a, b, c] ↦ [a+1, b+1, c+1]</span>（各方向 +1 mod 4）</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td><strong>T（変換）</strong></td>
+        <td><span class="math">[a, b, c] ↦ [c, a, b]</span>（セル位置を循環シフト）</td>
+        <td>3</td>
+      </tr>
+    </table>
+    <p style="margin-top:12px;">
+      RT と TR の計算：
+    </p>
+    <div class="math-block">
+      RT([a,b,c]) = R([c,a,b]) = [c+1, a+1, b+1]<br>
+      TR([a,b,c]) = T([a+1,b+1,c+1]) = [c+1, a+1, b+1]
+    </div>
+    <p>
+      RT = TR なので <strong>R と T は可換</strong>です。
+      R の位数は 4、T の位数は 3、gcd(4, 3) = 1 より、
+      生成される群 G は <strong>G ≅ Z₄ × Z₃ ≅ Z₁₂</strong>（位数12の巡回群）となります。
+    </p>
+    <p>
+      群の元は <span class="math">Rⁱ Tʲ</span>（i = 0,1,2,3　j = 0,1,2）の12通りです。
+    </p>
+
+    <h3>2. Burnside の補題</h3>
+    <p>
+      群 G が有限集合 X に作用するとき、軌道（同値類）の個数は：
+    </p>
+    <div class="math-block">
+      |X/G| = <sup>1</sup>⁄<sub>|G|</sub> &nbsp;Σ<sub>g ∈ G</sub> |Fix(g)|
+    </div>
+    <p>
+      ここで <span class="math">Fix(g) = { x ∈ X | g·x = x }</span>（g で不動な元の集合）。
+    </p>
+
+    <h3>3. 各群元の固定点数</h3>
+    <p>
+      <span class="math">Rⁱ Tʲ</span> が [a, b, c] を固定する条件を求めます。
+    </p>
+
+    <p><strong>j = 0（変換なし）のとき</strong>：<span class="math">Rⁱ T⁰([a,b,c]) = [a+i, b+i, c+i] = [a,b,c]</span></p>
+    <p>これは a+i ≡ a (mod 4) が必要 → i ≡ 0 (mod 4) → <strong>i = 0 のみ可能</strong>。</p>
+    <table>
+      <tr><th>元</th><th>|Fix|</th><th>理由</th></tr>
+      <tr><td>R⁰T⁰（恒等元）</td><td>64</td><td>全ての64通りが不動</td></tr>
+      <tr><td>R¹T⁰, R²T⁰, R³T⁰</td><td>0</td><td>i+i≡i (mod 4) を満たす方向が存在しない</td></tr>
+    </table>
+
+    <p style="margin-top:14px;"><strong>j = 1（T を1回適用）のとき</strong>：<span class="math">Rⁱ T¹([a,b,c]) = [c+i, a+i, b+i] = [a,b,c]</span></p>
+    <p>つまり c+i ≡ a、a+i ≡ b、b+i ≡ c の連立。3式を足すと 3i ≡ 0 (mod 4)、すなわち i ≡ 0 (mod 4/gcd(3,4)) = 0 (mod 4)。</p>
+    <p>よって <strong>i = 0 のみ可能</strong>。そのとき c = a, a = b, b = c → a = b = c。4通り。</p>
+    <table>
+      <tr><th>元</th><th>|Fix|</th><th>理由</th></tr>
+      <tr><td>R⁰T¹</td><td>4</td><td>a = b = c（全4方向）</td></tr>
+      <tr><td>R¹T¹, R²T¹, R³T¹</td><td>0</td><td>i ≠ 0 では解なし</td></tr>
+    </table>
+
+    <p style="margin-top:14px;"><strong>j = 2（T を2回適用）のとき</strong>：<span class="math">Rⁱ T²([a,b,c]) = [b+i, c+i, a+i] = [a,b,c]</span></p>
+    <p>b+i ≡ a、c+i ≡ b、a+i ≡ c → j=1 と対称な構造で同じ結論。<strong>i = 0 のみ</strong>、a = b = c で 4通り。</p>
+    <table>
+      <tr><th>元</th><th>|Fix|</th><th>理由</th></tr>
+      <tr><td>R⁰T²</td><td>4</td><td>a = b = c（全4方向）</td></tr>
+      <tr><td>R¹T², R²T², R³T²</td><td>0</td><td>解なし</td></tr>
+    </table>
+
+    <h3>4. Burnside の計算</h3>
+    <div class="math-block">
+      Σ<sub>g ∈ G</sub> |Fix(g)| = 64 + 0 + 0 + 0 + 4 + 0 + 0 + 0 + 4 + 0 + 0 + 0 = 72
+    </div>
+    <div class="math-block">
+      |X/G| = 72 ÷ 12 = <strong>6</strong>
+    </div>
+    <p>
+      以上より、回転と変換による同値類はちょうど <strong style="color:var(--gold)">6クラス</strong> となります。
+    </p>
+    <p style="margin-top:10px;">
+      各クラスの代表元と個数（4 + 12×5 = 64 の内訳）はゲーム本文の分類表の通りです。
+      G1 のみ |Fix(R⁰T¹)| = |Fix(R⁰T²)| = 4 に寄与する「高対称」なクラスで、
+      残る G2–G6 は変換・回転いずれでも自分自身に戻らない「一般的」なクラスです。
+    </p>
+
+    </div><!-- /margin-top -->
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<section id="stages">
+  <h2>ステージ攻略</h2>
+  <p>難易度の高いステージの攻略ポイントをまとめています。</p>
+  <div class="stage-grid">
+    <a class="stage-card" href="stage6.html">
+      <div class="sc-num">STAGE 6</div>
+      <div class="sc-title">ガラス壁と灰壁</div>
+      <div class="sc-desc">初手のピース種類で攻略ルートが変わる</div>
+    </a>
+    <a class="stage-card" href="stage8.html">
+      <div class="sc-num">STAGE 8</div>
+      <div class="sc-title">上段トラップ</div>
+      <div class="sc-desc">①の金色ブロックから消去を始める</div>
+    </a>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<footer>
+  <p>VECTORS Browser Port &copy; Yoshitaka Atarashi &nbsp;|&nbsp; Original: &copy; 1993 Dark Veil</p>
+</footer>
+
+</div>
+</body>
+</html>
